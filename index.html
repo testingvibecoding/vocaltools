@@ -770,7 +770,7 @@ function bind(){
   $('libClose').onclick=()=>closeOv('libOv');
   $('libOv').addEventListener('click',e=>{ if(e.target===$('libOv')) closeOv('libOv'); });  // 点弹窗外关闭
   $('newScaleBtn').onclick=()=>openEditor(null);
-  $('manualBtn').onclick=()=>{ currentScale=null; selItemId=null; renderList(); $('scaleLabel').textContent='手动弹奏（点琴键直接发声）'; $('itemNote').value=''; updateRightPanel(); };
+  $('manualBtn').onclick=()=>{ currentScale=null; selItemId=null; renderList(); $('scaleLabel').textContent='手动弹奏'; $('itemNote').value=''; updateRightPanel(); };
   $('exportBtn').onclick=doExport;
   $('importBtn').onclick=()=>$('importFile').click();
   $('importFile').onchange=e=>{ if(e.target.files[0]) doImport(e.target.files[0]); e.target.value=''; };
