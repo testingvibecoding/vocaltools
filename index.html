@@ -59,11 +59,12 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 #itemTitle{display:none!important}
 /* keyboard bar */
 #kbBar{display:flex;align-items:center;gap:8px;padding:4px 8px;background:var(--bg2);border-top:1px solid var(--line);font-size:12px;flex-wrap:nowrap;overflow:hidden}
-#kbBar .scaleLabel{color:var(--acc2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#kbBar .status{color:var(--dim);white-space:nowrap}
+#kbBar .scaleLabel{color:var(--acc2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1 1 auto;min-width:0}
+#kbBar .status{color:var(--dim);white-space:nowrap;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
 #kbBar .status.rec{color:var(--hot);font-weight:600}
 #kbBar .status.pass{color:var(--warn);font-weight:600}
-.kbhint{font-size:11px;color:var(--dim);white-space:nowrap}
+.kbhint{font-size:11px;color:var(--dim);white-space:nowrap;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+#kbBar button,#kbBar .seg,#speedCtl{flex:0 0 auto;white-space:nowrap}
 #speedCtl{display:flex;gap:4px;align-items:center}
 #speedCtl button{padding:3px 8px;font-size:12px;min-width:0}
 #speedCtl .num{font-weight:700;color:var(--acc2);font-size:12px;min-width:46px;text-align:center}
