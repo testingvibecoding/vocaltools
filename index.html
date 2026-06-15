@@ -32,11 +32,11 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 #topbar select{max-width:130px}
 .spacer{flex:1}
 /* main */
-#main{position:absolute;top:var(--topH,34px);left:0;right:0;height:150px;z-index:40;display:flex;min-height:0;overflow:hidden;background:var(--bg);border-bottom:1px solid var(--line);box-shadow:0 7px 16px rgba(0,0,0,.45);transition:height .28s ease}
+#main{position:absolute;top:var(--topH,34px);left:env(safe-area-inset-left,0px);right:env(safe-area-inset-right,0px);height:150px;z-index:40;display:flex;min-height:0;overflow:hidden;background:var(--bg);border-bottom:1px solid var(--line);box-shadow:0 7px 16px rgba(0,0,0,.45);transition:height .28s ease}
 #mainSlot{flex:none;height:150px}
 #app.mode-kb #scaleInfo{display:none!important}
 #leftPanel,#rightPanel{display:flex;flex-direction:column;min-height:0;padding:6px 8px}
-#leftPanel{width:33%;border-right:1px solid var(--line)}
+#leftPanel{width:38%;border-right:1px solid var(--line)}
 #rightPanel{flex:1}
 .phead{font-size:11px;color:var(--dim);letter-spacing:1px;margin:0 0 4px;display:flex;align-items:center;gap:6px}
 .phead .grow{flex:1}
