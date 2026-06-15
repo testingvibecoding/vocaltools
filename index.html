@@ -449,8 +449,11 @@ function flashDown(m){ const e=keyEl[m]; if(!e)return; e.classList.add('down'); 
 let pointers={};   // 支持多点触控（和弦）：每个指针独立判定
 kbView.addEventListener('pointerdown',e=>{
   ensureAC(); const wasTop=(curMode!=='kb'); setMode('kb');
-  pointers[e.pointerId]={x:e.clientX,y:e.clientY,pan:panX,moved:false,m:keyFromEvent(e),activate:wasTop};
+  const m=keyFromEvent(e);
+  const p={x:e.clientX,y:e.clientY,pan:panX,moved:false,m,activate:wasTop,sounded:false};
+  pointers[e.pointerId]=p;
   try{ kbView.setPointerCapture(e.pointerId); }catch(_){}
+  if(m!=null && !currentScale && !passMode && !recMode && !wasTop){ flashDown(m); playNote(m,AC.currentTime,0.9); p.sounded=true; }  // 手动模式：按下即响，多指可同时（和弦）
 });
 kbView.addEventListener('pointermove',e=>{
   const p=pointers[e.pointerId]; if(!p) return;
@@ -460,7 +463,7 @@ kbView.addEventListener('pointermove',e=>{
 });
 function endKbPointer(e){
   const p=pointers[e.pointerId]; if(!p) return; delete pointers[e.pointerId];
-  if(!p.moved){ const m=p.m!=null?p.m:keyFromEvent(e); if(m!=null){ if(p.activate && !passMode && !recMode){ /* 来自上方区域：首点仅激活键盘，不发声 */ } else onKeyTap(m); } }
+  if(!p.moved && !p.sounded){ const m=p.m!=null?p.m:keyFromEvent(e); if(m!=null){ if(p.activate && !passMode && !recMode){ /* 来自上方区域：首点仅激活键盘，不发声 */ } else onKeyTap(m); } }
 }
 kbView.addEventListener('pointerup',endKbPointer);
 kbView.addEventListener('pointercancel',e=>{ delete pointers[e.pointerId]; });
