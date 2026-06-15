@@ -64,7 +64,9 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 #kbBar .status.rec{color:var(--hot);font-weight:600}
 #kbBar .status.pass{color:var(--warn);font-weight:600}
 .kbhint{font-size:11px;color:var(--dim);white-space:nowrap}
-.volbtn{padding:4px 9px;font-size:12px}
+#speedCtl{display:flex;gap:4px;align-items:center}
+#speedCtl button{padding:3px 8px;font-size:12px;min-width:0}
+#speedCtl .num{font-weight:700;color:var(--acc2);font-size:12px;min-width:46px;text-align:center}
 .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{border:0;border-radius:0;padding:5px 9px;font-size:12px;background:var(--bg3)}
 .seg button.on{background:var(--acc);color:#fff}
@@ -166,8 +168,8 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
     <span class="scaleLabel" id="scaleLabel">未选练习</span>
     <span class="spacer"></span>
     <span class="kbhint">↔ 按住琴键可左右拖动键盘位置</span>
-    <button id="volDown" class="volbtn" title="减小钢琴音量">🔉 －</button>
-    <button id="volUp" class="volbtn" title="增大钢琴音量">🔊 ＋</button>
+    <span class="kbhint">速度</span>
+    <span id="speedCtl"></span>
     <span class="status" id="kbStatus"></span>
     <button id="passCloseBtn" style="display:none;padding:4px 10px">关闭</button>
   </div>
@@ -286,7 +288,7 @@ function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('sho
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
 /* ===================== 音频引擎 ===================== */
-let AC=null, master=null, timbre='syn', pnoReady=false, pnoLoading=false, sampleBuf=[], volume=0.9;
+let AC=null, master=null, timbre='syn', pnoReady=false, pnoLoading=false, sampleBuf=[], volume=0.9, speed=100;
 function ensureAC(){
   if(!AC){ AC=new (window.AudioContext||window.webkitAudioContext)(); master=AC.createGain(); master.gain.value=volume; master.connect(AC.destination); }
   if(AC.state==='suspended') AC.resume();
@@ -480,7 +482,7 @@ function clearTimers(){ curTimers.forEach(clearTimeout); curTimers=[]; for(const
 function playScale(startM){
   const sc=currentScale; if(!sc){ playNote(startM,AC.currentTime,0.6); return; }
   ensureAC(); clearTimers();
-  const gap=sc.gap/1000; const t0=AC.currentTime+0.05; let t=t0, acc=0;
+  const gap=(sc.gap/1000)*(100/speed); const t0=AC.currentTime+0.05; let t=t0, acc=0;
   sc.steps.forEach(st=>{
     const m=startM+st.semi;
     const dur = sc.artic==='staccato' ? Math.min(0.2,gap*0.45) : st.dur*gap*0.96;
@@ -731,6 +733,16 @@ function renderLessons(){
     c.appendChild(mk('清除',()=>{ st.lessons=null; save(); renderLessons(); },'danger'));
   }
 }
+function askSpeed(cur){ let n=prompt('播放速度 %（50–300）', String(cur)); while(n!==null){ const x=parseInt(n,10); if(!isNaN(x)&&/^\s*\d+\s*$/.test(n)) return x; n=prompt('请输入数字（50–300）', n||''); } return null; }
+function setSpeed(v){ v=Math.round(v/10)*10; speed=Math.max(50,Math.min(300,v)); if(state&&state.settings){ state.settings.speed=speed; save(); } renderSpeed(); }
+function renderSpeed(){ const c=$('speedCtl'); if(!c)return; c.innerHTML='';
+  const mk=(txt,fn)=>{ const b=document.createElement('button'); b.textContent=txt; b.onclick=fn; return b; };
+  c.appendChild(mk('◀',()=>setSpeed(speed-10)));
+  const num=document.createElement('button'); num.className='num'; num.textContent=speed+'%'; num.title='点击手动编辑速度';
+  num.onclick=()=>{ const x=askSpeed(speed); if(x!=null) setSpeed(x); };
+  c.appendChild(num);
+  c.appendChild(mk('▶',()=>setSpeed(speed+10)));
+}
 function setVol(d){ ensureAC(); volume=Math.max(0,Math.min(1,Math.round((volume+d)*10)/10)); if(master) master.gain.value=volume; if(state&&state.settings){ state.settings.volume=volume; save(); } toast('钢琴音量 '+Math.round(volume*100)+'%'); }
 function bind(){
   $('main').addEventListener('pointerdown',()=>setMode('top'));
@@ -751,8 +763,6 @@ function bind(){
   $('libOv').addEventListener('click',e=>{ if(e.target===$('libOv')) closeOv('libOv'); });  // 点弹窗外关闭
   $('newScaleBtn').onclick=()=>openEditor(null);
   $('manualBtn').onclick=()=>{ currentScale=null; selItemId=null; renderList(); $('scaleLabel').textContent='手动弹奏（点琴键直接发声）'; $('itemNote').value=''; updateRightPanel(); };
-  $('volDown').onclick=()=>setVol(-0.1);
-  $('volUp').onclick=()=>setVol(0.1);
   $('exportBtn').onclick=doExport;
   $('importBtn').onclick=()=>$('importFile').click();
   $('importFile').onchange=e=>{ if(e.target.files[0]) doImport(e.target.files[0]); e.target.value=''; };
@@ -799,8 +809,9 @@ async function boot(){
   if(!state.settings.noteV){ state.students.forEach(s=>{ if(typeof s.globalNote==='string'){ let g=s.globalNote.replace(/^\s*剩余课时：[^\n]*\n?/,'').replace(/^\s*注意事项：/,''); s.globalNote=g.trim(); } }); state.settings.noteV=1; idbSet(state); }  // 清除旧备注模板文字
   timbre='syn';   // 启动一律默认合成音（不恢复采样钢琴）
   volume=(state.settings.volume!=null?state.settings.volume:0.9);
+  speed=(state.settings.speed!=null?state.settings.speed:100);
   $('app').classList.add('mode-kb');
-  buildKeyboard(); renderAll(); bind(); applyModeHeights();
+  buildKeyboard(); renderAll(); bind(); applyModeHeights(); renderSpeed();
   setTimeout(()=>{ setPan(panX,false); centerOn(60,false); applyModeHeights(); },60);
 }
 window.addEventListener('load',boot);
