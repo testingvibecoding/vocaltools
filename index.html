@@ -36,7 +36,7 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 #mainSlot{flex:none;height:150px}
 #app.mode-kb #scaleInfo{display:none!important}
 #leftPanel,#rightPanel{display:flex;flex-direction:column;min-height:0;padding:6px 8px}
-#leftPanel{width:42%;border-right:1px solid var(--line)}
+#leftPanel{width:33%;border-right:1px solid var(--line)}
 #rightPanel{flex:1}
 .phead{font-size:11px;color:var(--dim);letter-spacing:1px;margin:0 0 4px;display:flex;align-items:center;gap:6px}
 .phead .grow{flex:1}
@@ -54,7 +54,9 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 #scaleInfo{font-size:12px;color:var(--dim);background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;margin-bottom:6px;line-height:1.6}
 #scaleInfo b{color:var(--acc2)}
 #itemNote{flex:1;min-height:40px}
-.noteLbl{font-size:11px;color:var(--dim);margin:6px 0 3px}
+.noteLbl{font-size:11px;color:var(--dim);margin:2px 0 3px}
+#rightPanel>.phead{display:none}
+#itemTitle{display:none!important}
 /* keyboard bar */
 #kbBar{display:flex;align-items:center;gap:8px;padding:4px 8px;background:var(--bg2);border-top:1px solid var(--line);font-size:12px;flex-wrap:nowrap;overflow:hidden}
 #kbBar .scaleLabel{color:var(--acc2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -62,6 +64,7 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 #kbBar .status.rec{color:var(--hot);font-weight:600}
 #kbBar .status.pass{color:var(--warn);font-weight:600}
 .kbhint{font-size:11px;color:var(--dim);white-space:nowrap}
+.volbtn{padding:4px 9px;font-size:12px}
 .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{border:0;border-radius:0;padding:5px 9px;font-size:12px;background:var(--bg3)}
 .seg button.on{background:var(--acc);color:#fff}
@@ -85,9 +88,13 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 .key.cKey .lab{color:var(--acc);font-weight:700}
 .key.pass::after{content:"";position:absolute;left:0;right:0;bottom:0;height:32px;background:var(--warn);border-radius:0 0 5px 5px;z-index:0}
 .key.b.pass::after{height:24px;border-radius:0 0 4px 4px}
+.key.b.pass .lab{color:#3a2600}
 /* modal */
 .overlay{position:fixed;inset:0;background:rgba(8,6,14,.72);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
 .overlay.show{display:flex}
+#libOv{justify-content:flex-end;background:rgba(8,6,14,.45)}
+#libOv .modal{margin-right:10px}
+#leftPanel.dropHi{box-shadow:0 0 0 2px var(--acc2) inset;background:rgba(139,108,240,.10)}
 .modal{background:var(--bg2);border:1px solid var(--line);border-radius:14px;width:100%;max-width:680px;max-height:92vh;overflow-y:auto;padding:14px}
 .modal h3{margin:0 0 10px;font-size:15px;color:var(--acc2)}
 .modal .row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
@@ -101,6 +108,9 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 .libRow .prev{font-size:11px;color:var(--dim)}
 .libRow button{padding:4px 7px;font-size:11px}
 .libRow.curStu{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+#lessonsCtl{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+#lessonsCtl button{min-width:0;padding:3px 8px;font-size:12px}
+#lessonsCtl .num{font-weight:700;font-size:12px;color:var(--acc2);padding:3px 9px}
 .tabs{display:flex;gap:6px;margin-bottom:8px}
 .tabs button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
 .hint{font-size:11px;color:var(--dim);line-height:1.6;margin:4px 0}
@@ -133,7 +143,7 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 
   <div id="main">
     <div id="leftPanel">
-      <div class="phead"><span class="grow">练习项目</span><button id="addTextBtn" style="padding:3px 7px;font-size:11px">＋文本项</button></div>
+      <div class="phead"><span class="grow">练习项目</span><button id="addScaleBtn" style="padding:3px 7px;font-size:11px">＋音阶</button><button id="addTextBtn" style="padding:3px 7px;font-size:11px">＋文本项</button></div>
       <div id="itemList"></div>
     </div>
     <div id="rightPanel">
@@ -152,10 +162,14 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
       <button data-t="syn" class="on">合成音</button>
       <button data-t="pno">采样钢琴</button>
     </div>
+    <button id="manualBtn" style="padding:5px 9px">手动输入</button>
     <span class="scaleLabel" id="scaleLabel">未选练习</span>
     <span class="spacer"></span>
     <span class="kbhint">↔ 按住琴键可左右拖动键盘位置</span>
+    <button id="volDown" class="volbtn" title="减小钢琴音量">🔉 －</button>
+    <button id="volUp" class="volbtn" title="增大钢琴音量">🔊 ＋</button>
     <span class="status" id="kbStatus"></span>
+    <button id="passCloseBtn" style="display:none;padding:4px 10px">关闭</button>
   </div>
 
   <div id="kbWrap">
@@ -167,9 +181,8 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 <!-- 学生备注 -->
 <div class="overlay" id="studentNoteOv">
   <div class="modal">
-    <h3>学生全局备注 · <span id="snName"></span></h3>
-    <div class="hint">写这个学生需要长期注意的事项、剩余课时数量等。</div>
-    <textarea id="studentNoteTa" style="height:160px"></textarea>
+    <h3 style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">学生全局备注 · <span id="snName"></span><span class="spacer"></span><span style="font-size:12px;color:var(--dim);font-weight:400">剩余课时</span><span id="lessonsCtl"></span></h3>
+    <textarea id="studentNoteTa" style="height:165px" placeholder="在此输入…"></textarea>
     <div class="row" style="margin-top:10px;justify-content:flex-end">
       <button class="danger" id="delStudentBtn">删除该学生</button>
       <span class="spacer"></span>
@@ -196,7 +209,7 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 <div class="overlay" id="libOv">
   <div class="modal">
     <h3>音阶库</h3>
-    <div class="hint">点条目右侧「加入」把音型加进当前学生的练习列表；或拖动 ⋮⋮ 手柄直接拖入左侧列表。</div>
+    <div class="hint">「加入」把音型加进当前学生的练习列表；拖动 ⋮⋮ 手柄：在库内上下拖动＝调整音阶库顺序，拖出窗口到左侧高亮的练习列表＝加入练习。</div>
     <div class="libList" id="libList"></div>
     <div class="row" style="justify-content:flex-end;margin-top:8px">
       <button id="libClose">关闭</button>
@@ -225,8 +238,8 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
       <div id="recPad"></div>
     </div>
     <div class="row" style="margin-top:6px"><label>音间间隔</label>
-      <input type="range" id="edGap" min="120" max="900" step="10" value="320">
-      <span id="edGapV" style="font-size:12px;color:var(--dim);min-width:58px">320 ms</span>
+      <input type="range" id="edGap" min="120" max="1200" step="10" value="380">
+      <span id="edGapV" style="font-size:12px;color:var(--dim);min-width:58px">380 ms</span>
     </div>
     <div class="row"><label>发音</label>
       <div class="seg" id="edArtic">
@@ -273,9 +286,9 @@ function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('sho
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
 /* ===================== 音频引擎 ===================== */
-let AC=null, master=null, timbre='syn', pnoReady=false, pnoLoading=false, sampleBuf=[];
+let AC=null, master=null, timbre='syn', pnoReady=false, pnoLoading=false, sampleBuf=[], volume=0.9;
 function ensureAC(){
-  if(!AC){ AC=new (window.AudioContext||window.webkitAudioContext)(); master=AC.createGain(); master.gain.value=0.9; master.connect(AC.destination); }
+  if(!AC){ AC=new (window.AudioContext||window.webkitAudioContext)(); master=AC.createGain(); master.gain.value=volume; master.connect(AC.destination); }
   if(AC.state==='suspended') AC.resume();
   return AC;
 }
@@ -337,17 +350,15 @@ function save(){ clearTimeout(saveT); saveT=setTimeout(()=>idbSet(state),250); }
 function S(name,seq,gap,artic){ const p=parseSeq(seq); return {id:uid(),name,steps:p.steps,gap:gap||320,artic:artic||'legato',preset:true}; }
 function defaultScales(){
   return [
-    S('五度上下','1-2-3-4-5-4-3-2-1',300,'legato'),
-    S('三度 1-2-3-2-1','1-2-3-2-1',320,'legato'),
-    S('琶音 1-3-5-3-1','1-3-5-3-1',320,'legato'),
-    S('大调音阶（上行）','1-2-3-4-5-6-7-8',260,'legato'),
-    // —— 追加 ——
-    S('1-5-1','1-5-1',360,'legato'),
-    S('5-4-3-2-1','5-4-3-2-1',300,'legato'),
-    S('五度上行 1-2-3-4-5','1-2-3-4-5',300,'legato'),
-    S('八度直上 1-8','1-8',420,'legato'),
-    S('八度琶音 1-3-5-8-5-3-1','1-3-5-8-5-3-1',300,'legato'),
-    S('八度半音滑','1 1# 2 2# 3 4 4# 5 5# 6 6# 7 8',110,'legato')
+    S('三度 1-2-3-2-1','1-2-3-2-1',384,'legato'),
+    S('琶音 1-3-5-3-1','1-3-5-3-1',384,'legato'),
+    S('1-5-1','1-5-1',432,'legato'),
+    S('5-4-3-2-1','5-4-3-2-1',360,'legato'),
+    S('五度上下','1-2-3-4-5-4-3-2-1',360,'legato'),
+    S('五度上行 1-2-3-4-5','1-2-3-4-5',360,'legato'),
+    S('大调音阶（上行）','1-2-3-4-5-6-7-8',312,'legato'),
+    S('八度直上 1-8','1-8',504,'legato'),
+    S('八度琶音 1-3-5-8-5-3-1','1-3-5-8-5-3-1',360,'legato')
   ];
 }
 function defaultItems(){ return [{id:uid(),type:'text',title:'呼吸练习',note:''}]; } // 默认练习项目
@@ -359,8 +370,8 @@ function defaultState(){
   const a=findId('1-5-1'); if(a) items.push({id:uid(),type:'scale',scaleId:a,note:''});
   const b=findId('三度 1-2-3-2-1'); if(b) items.push({id:uid(),type:'scale',scaleId:b,note:''});
   return { scales,
-    students:[{id:sid,name:'示例学生',globalNote:'剩余课时：—\n注意事项：',passaggio:[],items}],
-    curStudent:sid, settings:{timbre:'syn'} };
+    students:[{id:sid,name:'示例学生',globalNote:'',lessons:null,passaggio:[],items}],
+    curStudent:sid, settings:{timbre:'syn',gapV:2,noteV:1} };
 }
 
 /* ===================== 解析音型序列 ===================== */
@@ -435,8 +446,8 @@ function flashDown(m){ const e=keyEl[m]; if(!e)return; e.classList.add('down'); 
 /* —— 键盘指针：拖动平移 / 点按触发 —— */
 let pdown=null;
 kbView.addEventListener('pointerdown',e=>{
-  ensureAC(); setMode('kb');
-  pdown={x:e.clientX,y:e.clientY,pan:panX,moved:false,m:keyFromEvent(e),id:e.pointerId};
+  ensureAC(); const wasTop=(curMode!=='kb'); setMode('kb');
+  pdown={x:e.clientX,y:e.clientY,pan:panX,moved:false,m:keyFromEvent(e),id:e.pointerId,activate:wasTop};
   kbView.setPointerCapture(e.pointerId);
 });
 kbView.addEventListener('pointermove',e=>{
@@ -447,14 +458,17 @@ kbView.addEventListener('pointermove',e=>{
 });
 kbView.addEventListener('pointerup',e=>{
   if(!pdown||e.pointerId!==pdown.id){ pdown=null; return; }
-  if(!pdown.moved){ const m=pdown.m!=null?pdown.m:keyFromEvent(e); if(m!=null) onKeyTap(m); }
+  if(!pdown.moved){ const m=pdown.m!=null?pdown.m:keyFromEvent(e); if(m!=null){ if(pdown.activate && !passMode && !recMode){ /* 来自上方区域：首点仅激活键盘，不发声 */ } else onKeyTap(m); } }
   pdown=null;
 });
 kbView.addEventListener('pointercancel',()=>{pdown=null;});
 function keyFromEvent(e){ const el=document.elementFromPoint(e.clientX,e.clientY); if(el&&el.closest){ const k=el.closest('.key'); if(k) return +k.dataset.m; } return null; }
 
 function onKeyTap(m){
-  if(passMode){ togglePassaggio(m); return; }
+  if(passMode){ const st=curStudent(); flashDown(m);
+    if(st){ if(st.passaggio.length===1 && st.passaggio[0]===m){ st.passaggio=[]; applyPassaggio(); save(); }   // 再点当前换声点=取消，留在编辑
+            else { st.passaggio=[m]; applyPassaggio(); save(); togglePassMode(); } }                          // 选新点=设定并退出
+    return; }
   if(recMode){ recordNote(m); flashDown(m); playNote(m,AC.currentTime,0.5); return; }
   flashDown(m);
   if(currentScale) playScale(m); else playNote(m,AC.currentTime,0.6);
@@ -491,9 +505,11 @@ $('posBar').addEventListener('pointerup',()=>posDrag=false);
 /* ===================== 换声点编辑 ===================== */
 let passMode=false;
 function togglePassMode(){ passMode=!passMode; recMode=false; $('passBtn').classList.toggle('pri',passMode);
-  setStatus(passMode?'换声点编辑中：点琴键标记/取消，再次点「换声点」结束':''); $('kbStatus').classList.toggle('pass',passMode); }
-function togglePassaggio(m){ const st=curStudent(); if(!st)return; const i=st.passaggio.indexOf(m);
-  if(i<0) st.passaggio.push(m); else st.passaggio.splice(i,1); applyPassaggio(); save(); }
+  setStatus(passMode?'换声点编辑中，请点击新换声点':''); $('kbStatus').classList.toggle('pass',passMode); $('passCloseBtn').style.display=passMode?'':'none'; }
+function togglePassaggio(m){ const st=curStudent(); if(!st)return;
+  if(st.passaggio.length===1 && st.passaggio[0]===m) st.passaggio=[];   // 再点同一键=取消
+  else st.passaggio=[m];                                               // 选新点立即替换旧点（只保留一个）
+  applyPassaggio(); save(); }
 
 /* ===================== 录入音型 ===================== */
 let recMode=false, recNotes=[];
@@ -518,7 +534,7 @@ function scaleById(id){ return state.scales.find(s=>s.id===id); }
 function renderStudents(){ const b=$('studentPickBtn'); const st=curStudent(); b.textContent=(st?st.name:'学生')+' ▾'; }
 function switchStudent(id){ state.curStudent=id; selItemId=null; currentScale=null; applyPassaggio(); renderList(); renderStudents();
   $('itemTitle').textContent='—'; $('itemNote').value=''; $('scaleInfo').style.display='none'; $('scaleLabel').textContent='未选练习'; save(); }
-function addStudent(){ const n=prompt('新学生姓名'); if(!n)return; const id=uid(); state.students.push({id,name:n.trim()||'新学生',globalNote:'剩余课时：—\n注意事项：',passaggio:[],items:defaultItems()}); switchStudent(id); renderStudentList(); }
+function addStudent(){ const n=prompt('新学生姓名'); if(!n)return; const id=uid(); state.students.push({id,name:n.trim()||'新学生',globalNote:'',lessons:null,passaggio:[],items:defaultItems()}); switchStudent(id); renderStudentList(); }
 function renderStudentList(){ const wrap=$('studentList'); if(!wrap)return; wrap.innerHTML='';
   state.students.forEach(s=>{ const row=document.createElement('div'); row.className='libRow'+(s.id===state.curStudent?' curStu':''); row.dataset.id=s.id;
     row.innerHTML='<span class="hdl">⋮⋮</span><div class="nm" style="flex:1">'+escapeHtml(s.name)+(s.id===state.curStudent?' <span style="font-size:10px;color:var(--acc2)">当前</span>':'')+'</div><button data-act="ren">改名</button>';
@@ -619,6 +635,25 @@ function isInside(el,x,y){ const r=el.getBoundingClientRect(); return x>=r.left&
 function moveItem(itemId,toIdx){ const st=curStudent(); const from=st.items.findIndex(i=>i.id===itemId); if(from<0)return; const [it]=st.items.splice(from,1); if(toIdx>from)toIdx--; st.items.splice(Math.max(0,Math.min(st.items.length,toIdx)),0,it); renderList(); save(); }
 
 /* ===================== 音阶库 UI ===================== */
+let libDrag=null, libLine=null;
+function startLibDrag(e,scaleId){ e.preventDefault(); e.stopPropagation(); const sc=scaleById(scaleId);
+  const g=document.createElement('div'); g.className='dragGhost'; g.textContent=sc?sc.name:''; document.body.appendChild(g);
+  libDrag={scaleId,ghost:g,mode:null}; $('leftPanel').classList.add('dropHi'); libGhost(e.clientX,e.clientY);
+  window.addEventListener('pointermove',onLibMove,{passive:false}); window.addEventListener('pointerup',onLibUp); }
+function libGhost(x,y){ if(libDrag){ libDrag.ghost.style.left=(x+10)+'px'; libDrag.ghost.style.top=(y+10)+'px'; } }
+function clearLibDrop(){ if(libLine&&libLine.parentNode)libLine.parentNode.removeChild(libLine); libLine=null; removeDropLine(); }
+function onLibMove(e){ e.preventDefault(); libGhost(e.clientX,e.clientY);
+  const modal=$('libOv').querySelector('.modal'); const mr=modal.getBoundingClientRect(); const list=$('libList'); const lr=list.getBoundingClientRect();
+  clearLibDrop();
+  if(e.clientX>=lr.left&&e.clientX<=lr.right&&e.clientY>=mr.top&&e.clientY<=mr.bottom){ libDrag.mode='reorder';
+    libLine=document.createElement('div'); libLine.className='dropline'; let placed=false; for(const r of list.querySelectorAll('.libRow')){ const rc=r.getBoundingClientRect(); if(e.clientY<rc.top+rc.height/2){ list.insertBefore(libLine,r); placed=true; break; } } if(!placed)list.appendChild(libLine);
+  } else if(e.clientX<mr.left){ libDrag.mode='add'; $('leftPanel').classList.add('dropHi'); showDropLine(e.clientY); }
+  else { libDrag.mode=null; } }
+function onLibUp(){ window.removeEventListener('pointermove',onLibMove); window.removeEventListener('pointerup',onLibUp);
+  if(libDrag.ghost.parentNode)libDrag.ghost.parentNode.removeChild(libDrag.ghost); $('leftPanel').classList.remove('dropHi');
+  if(libDrag.mode==='reorder'){ const list=$('libList'); const kids=[...list.children]; let li=kids.indexOf(libLine); let real; if(li<0)real=state.scales.length; else { real=0; for(let i=0;i<li;i++) if(kids[i].classList.contains('libRow'))real++; } const from=state.scales.findIndex(s=>s.id===libDrag.scaleId); if(from>=0){ const [it]=state.scales.splice(from,1); if(real>from)real--; state.scales.splice(Math.max(0,Math.min(state.scales.length,real)),0,it); renderLib(); save(); } }
+  else if(libDrag.mode==='add'){ let idx=dropIndex(); let real=idx<0?curStudent().items.length:countItemsBefore(idx); const nid=addScaleItem(libDrag.scaleId,real); selectItem(nid); toast('已加入练习列表'); closeOv('libOv'); }
+  clearLibDrop(); libDrag=null; }
 function renderLib(){
   const wrap=$('libList'); wrap.innerHTML='';
   state.scales.forEach(sc=>{
@@ -630,7 +665,7 @@ function renderLib(){
     row.querySelector('[data-act=edit]').onclick=()=>openEditor(sc);
     row.querySelector('[data-act=copy]').onclick=()=>{ const c={...sc,id:uid(),name:sc.name+' 副本',preset:false,steps:sc.steps.map(s=>({...s}))}; state.scales.push(c); renderLib(); save(); };
     row.querySelector('[data-act=del]').onclick=()=>{ if(confirm('删除音型「'+sc.name+'」？引用它的练习项会显示为已删除。')){ state.scales=state.scales.filter(x=>x.id!==sc.id); renderLib(); renderList(); save(); } };
-    row.querySelector('.hdl').addEventListener('pointerdown',ev=>{ closeOv('libOv'); setTimeout(()=>startDrag(ev,{kind:'lib',scaleId:sc.id,label:sc.name}),0); });
+    row.querySelector('.hdl').addEventListener('pointerdown',ev=>startLibDrag(ev,sc.id));
     wrap.appendChild(row);
   });
 }
@@ -642,7 +677,7 @@ function openEditor(sc){
   $('edTitle').textContent=sc?'编辑音型':'新建音型';
   $('edName').value=sc?sc.name:'';
   $('edSeq').value=sc?stepsToSeqStr(sc.steps):'';
-  $('edGap').value=sc?sc.gap:320; $('edGapV').textContent=(sc?sc.gap:320)+' ms';
+  $('edGap').value=sc?sc.gap:380; $('edGapV').textContent=(sc?sc.gap:380)+' ms';
   edArtic=sc?sc.artic:'legato'; setArticUI();
   setTab('str'); updateParsed();
   openOv('edOv');
@@ -681,21 +716,43 @@ function renderAll(){ renderStudents(); applyPassaggio(); renderList();
   $('itemTitle').textContent='—'; $('scaleInfo').style.display='none'; $('itemNote').value=''; $('scaleLabel').textContent='未选练习';
   [...$('timbreSeg').children].forEach(b=>b.classList.toggle('on',b.dataset.t===timbre)); }
 
+function askLessons(cur){ let n=prompt('剩余课时数', cur!=null?String(cur):''); while(n!==null){ const x=parseInt(n,10); if(!isNaN(x)&&x>=0&&/^\s*\d+\s*$/.test(n)) return x; n=prompt('请输入数字（剩余课时数）', n||''); } return null; }
+function renderLessons(){
+  const st=curStudent(); const v=st.lessons; const c=$('lessonsCtl'); if(!c)return; c.innerHTML='';
+  const mk=(txt,fn,cls)=>{ const b=document.createElement('button'); b.textContent=txt; if(cls)b.className=cls; b.onclick=fn; return b; };
+  if(v==null){
+    c.appendChild(mk('设置课时',()=>{ const x=askLessons(null); if(x!=null){ st.lessons=x; save(); renderLessons(); } }));
+  } else {
+    c.appendChild(mk('◀',()=>{ st.lessons=Math.max(0,(st.lessons||0)-1); save(); renderLessons(); }));
+    const num=document.createElement('button'); num.className='num'; num.textContent=v+' 节'; num.title='点击直接编辑';
+    num.onclick=()=>{ const x=askLessons(st.lessons); if(x!=null){ st.lessons=x; save(); renderLessons(); } };
+    c.appendChild(num);
+    c.appendChild(mk('▶',()=>{ st.lessons=(st.lessons||0)+1; save(); renderLessons(); }));
+    c.appendChild(mk('清除',()=>{ st.lessons=null; save(); renderLessons(); },'danger'));
+  }
+}
+function setVol(d){ ensureAC(); volume=Math.max(0,Math.min(1,Math.round((volume+d)*10)/10)); if(master) master.gain.value=volume; if(state&&state.settings){ state.settings.volume=volume; save(); } toast('钢琴音量 '+Math.round(volume*100)+'%'); }
 function bind(){
   $('main').addEventListener('pointerdown',()=>setMode('top'));
   $('studentPickBtn').onclick=()=>{ renderStudentList(); openOv('studentOv'); };
   $('studentOvClose').onclick=()=>closeOv('studentOv');
   $('studentOvAdd').onclick=addStudent;
   $('addStudentBtn').onclick=addStudent;
-  $('studentNoteBtn').onclick=()=>{ const st=curStudent(); $('snName').textContent=st.name; $('studentNoteTa').value=st.globalNote||''; openOv('studentNoteOv'); };
+  $('studentNoteBtn').onclick=()=>{ const st=curStudent(); $('snName').textContent=st.name; $('studentNoteTa').value=st.globalNote||''; renderLessons(); openOv('studentNoteOv'); };
   $('snSave').onclick=()=>{ curStudent().globalNote=$('studentNoteTa').value; save(); closeOv('studentNoteOv'); toast('已保存'); };
   $('snCancel').onclick=()=>closeOv('studentNoteOv');
   $('delStudentBtn').onclick=()=>{ if(state.students.length<=1){alert('至少保留一个学生');return;} const st=curStudent(); if(!confirm('删除学生「'+st.name+'」？')) return; if(!confirm('⚠️ 警示：这将删除「'+st.name+'」的所有记录（练习列表、各项备注、换声点、全局备注），且无法撤销。确认要删除吗？')) return; state.students=state.students.filter(s=>s.id!==st.id); state.curStudent=state.students[0].id; selItemId=null;currentScale=null; closeOv('studentNoteOv'); renderStudents(); applyPassaggio(); renderList(); renderStudentList(); save(); };
   $('passBtn').onclick=togglePassMode;
+  $('passCloseBtn').onclick=()=>{ if(passMode) togglePassMode(); };
+  $('addScaleBtn').onclick=()=>{ setMode('top'); renderLib(); openOv('libOv'); };
   $('addTextBtn').onclick=addTextItem;
-  $('libBtn').onclick=()=>{ renderLib(); openOv('libOv'); };
+  $('libBtn').onclick=()=>{ setMode('top'); renderLib(); openOv('libOv'); };
   $('libClose').onclick=()=>closeOv('libOv');
+  $('libOv').addEventListener('click',e=>{ if(e.target===$('libOv')) closeOv('libOv'); });  // 点弹窗外关闭
   $('newScaleBtn').onclick=()=>openEditor(null);
+  $('manualBtn').onclick=()=>{ currentScale=null; selItemId=null; renderList(); $('scaleLabel').textContent='手动弹奏（点琴键直接发声）'; $('itemNote').value=''; updateRightPanel(); };
+  $('volDown').onclick=()=>setVol(-0.1);
+  $('volUp').onclick=()=>setVol(0.1);
   $('exportBtn').onclick=doExport;
   $('importBtn').onclick=()=>$('importFile').click();
   $('importFile').onchange=e=>{ if(e.target.files[0]) doImport(e.target.files[0]); e.target.value=''; };
@@ -737,7 +794,11 @@ async function boot(){
   state=await idbGet();
   if(!state||!state.students||!state.scales){ state=defaultState(); idbSet(state); }
   if(!state.settings) state.settings={timbre:'syn'};
+  if(!state.settings.gapV){ state.scales.forEach(s=>{ if(s.preset) s.gap=Math.round(s.gap*1.2); }); state.settings.gapV=2; idbSet(state); }        // 极旧数据→相对原始净 ×1.2
+  else if(state.settings.gapV===1){ state.scales.forEach(s=>{ if(s.preset) s.gap=Math.round(s.gap*0.8); }); state.settings.gapV=2; idbSet(state); }  // 上一版(×1.5)→再 ×0.8
+  if(!state.settings.noteV){ state.students.forEach(s=>{ if(typeof s.globalNote==='string'){ let g=s.globalNote.replace(/^\s*剩余课时：[^\n]*\n?/,'').replace(/^\s*注意事项：/,''); s.globalNote=g.trim(); } }); state.settings.noteV=1; idbSet(state); }  // 清除旧备注模板文字
   timbre='syn';   // 启动一律默认合成音（不恢复采样钢琴）
+  volume=(state.settings.volume!=null?state.settings.volume:0.9);
   $('app').classList.add('mode-kb');
   buildKeyboard(); renderAll(); bind(); applyModeHeights();
   setTimeout(()=>{ setPan(panX,false); centerOn(60,false); applyModeHeights(); },60);
