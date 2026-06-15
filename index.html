@@ -446,24 +446,24 @@ function litKey(m,on){ const e=keyEl[m]; if(e) e.classList.toggle('lit',on); }
 function flashDown(m){ const e=keyEl[m]; if(!e)return; e.classList.add('down'); setTimeout(()=>e.classList.remove('down'),140); }
 
 /* —— 键盘指针：拖动平移 / 点按触发 —— */
-let pdown=null;
+let pointers={};   // 支持多点触控（和弦）：每个指针独立判定
 kbView.addEventListener('pointerdown',e=>{
   ensureAC(); const wasTop=(curMode!=='kb'); setMode('kb');
-  pdown={x:e.clientX,y:e.clientY,pan:panX,moved:false,m:keyFromEvent(e),id:e.pointerId,activate:wasTop};
-  kbView.setPointerCapture(e.pointerId);
+  pointers[e.pointerId]={x:e.clientX,y:e.clientY,pan:panX,moved:false,m:keyFromEvent(e),activate:wasTop};
+  try{ kbView.setPointerCapture(e.pointerId); }catch(_){}
 });
 kbView.addEventListener('pointermove',e=>{
-  if(!pdown||e.pointerId!==pdown.id) return;
-  const dx=e.clientX-pdown.x;
-  if(Math.abs(dx)>6||Math.abs(e.clientY-pdown.y)>10) pdown.moved=true;
-  if(pdown.moved) setPan(pdown.pan+dx,false);
+  const p=pointers[e.pointerId]; if(!p) return;
+  const dx=e.clientX-p.x;
+  if(Math.abs(dx)>6||Math.abs(e.clientY-p.y)>10) p.moved=true;
+  if(p.moved) setPan(p.pan+dx,false);
 });
-kbView.addEventListener('pointerup',e=>{
-  if(!pdown||e.pointerId!==pdown.id){ pdown=null; return; }
-  if(!pdown.moved){ const m=pdown.m!=null?pdown.m:keyFromEvent(e); if(m!=null){ if(pdown.activate && !passMode && !recMode){ /* 来自上方区域：首点仅激活键盘，不发声 */ } else onKeyTap(m); } }
-  pdown=null;
-});
-kbView.addEventListener('pointercancel',()=>{pdown=null;});
+function endKbPointer(e){
+  const p=pointers[e.pointerId]; if(!p) return; delete pointers[e.pointerId];
+  if(!p.moved){ const m=p.m!=null?p.m:keyFromEvent(e); if(m!=null){ if(p.activate && !passMode && !recMode){ /* 来自上方区域：首点仅激活键盘，不发声 */ } else onKeyTap(m); } }
+}
+kbView.addEventListener('pointerup',endKbPointer);
+kbView.addEventListener('pointercancel',e=>{ delete pointers[e.pointerId]; });
 function keyFromEvent(e){ const el=document.elementFromPoint(e.clientX,e.clientY); if(el&&el.closest){ const k=el.closest('.key'); if(k) return +k.dataset.m; } return null; }
 
 function onKeyTap(m){
