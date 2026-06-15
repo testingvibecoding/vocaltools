@@ -24,7 +24,7 @@ button.pri{background:var(--acc);border-color:var(--acc)}
 button.danger{color:var(--hot)}
 select{background:var(--bg3);border:1px solid var(--line);border-radius:8px;padding:5px 6px;font-size:13px}
 textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:8px;width:100%;resize:none;font-size:13px;line-height:1.5}
-#app{display:flex;flex-direction:column;height:100vh;height:100dvh;position:relative}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh;position:relative;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px)}
 /* top bar */
 #topbar{display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--bg2);border-bottom:1px solid var(--line);flex-wrap:nowrap;overflow-x:auto}
 #topbar .title{font-weight:700;font-size:14px;color:var(--acc2);white-space:nowrap;margin-right:2px}
@@ -41,7 +41,7 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 .phead{font-size:11px;color:var(--dim);letter-spacing:1px;margin:0 0 4px;display:flex;align-items:center;gap:6px}
 .phead .grow{flex:1}
 #itemList{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding-right:2px}
-.item{display:flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:6px 6px;font-size:13px}
+.item{display:flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:6px 6px;font-size:13px;touch-action:none}
 .item.sel{border-color:var(--acc);background:var(--bg3);box-shadow:0 0 0 1px var(--acc) inset}
 .item .hdl{cursor:grab;color:var(--dim);font-size:14px;padding:0 2px;touch-action:none}
 .item .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -104,7 +104,7 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 .modal input[type=text]{flex:1;min-width:120px;background:var(--bg3);border:1px solid var(--line);border-radius:8px;padding:7px;font-size:14px}
 .modal input[type=range]{flex:1}
 .libList{display:flex;flex-direction:column;gap:5px;margin:6px 0}
-.libRow{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--line);border-radius:8px;padding:6px}
+.libRow{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--line);border-radius:8px;padding:6px;touch-action:none}
 .libRow .hdl{cursor:grab;color:var(--dim);touch-action:none;padding:0 2px}
 .libRow .nm{flex:1;font-size:13px}
 .libRow .prev{font-size:11px;color:var(--dim)}
@@ -421,7 +421,7 @@ let keyEl={}, keyX={}, keyW={}, innerW=0, panX=0, WKW=58, BKW=34;
 const WOFF={0:0,2:1,4:2,5:3,7:4,9:5,11:6};        // 白键在八度内的序号
 const BCEN={1:0.9,3:2.1,6:3.8,8:5.0,10:6.2};       // 黑键中心（白键宽为单位，自该八度C左缘起，仿真实钢琴偏移）
 function cLeftIndex(m){ return 7*Math.floor(m/12)-12; } // 该音所在八度C的白键序号（以A0=0为基准）
-function octavesToShow(){ const w=window.innerWidth||1024; if(w<1024) return 1.5; if(w<1180) return 2; return 2.5; } // iPhone/iPad mini/iPad
+function octavesToShow(){ const w=window.innerWidth||1024; if(w<1024) return 1.5; if(w<1180) return 1.8; return 2; } // iPhone1.5 / iPad mini1.8 / 完整iPad2
 function buildKeyboard(){
   const vw=kbView.clientWidth||window.innerWidth||1024;
   WKW=Math.max(30, vw/(octavesToShow()*7)); BKW=WKW*0.62;
@@ -540,9 +540,8 @@ function addStudent(){ const n=prompt('新学生姓名'); if(!n)return; const id
 function renderStudentList(){ const wrap=$('studentList'); if(!wrap)return; wrap.innerHTML='';
   state.students.forEach(s=>{ const row=document.createElement('div'); row.className='libRow'+(s.id===state.curStudent?' curStu':''); row.dataset.id=s.id;
     row.innerHTML='<span class="hdl">⋮⋮</span><div class="nm" style="flex:1">'+escapeHtml(s.name)+(s.id===state.curStudent?' <span style="font-size:10px;color:var(--acc2)">当前</span>':'')+'</div><button data-act="ren">改名</button>';
-    row.querySelector('.nm').onclick=()=>{ switchStudent(s.id); closeOv('studentOv'); };
     row.querySelector('[data-act=ren]').onclick=()=>{ const v=prompt('学生姓名',s.name); if(v&&v.trim()){ s.name=v.trim(); save(); renderStudentList(); renderStudents(); } };
-    row.querySelector('.hdl').addEventListener('pointerdown',ev=>startStudentDrag(ev,s.id));
+    row.addEventListener('pointerdown',e=>rowPress(e, ()=>{ switchStudent(s.id); closeOv('studentOv'); }, ev=>startStudentDrag(ev,s.id)));
     wrap.appendChild(row); }); }
 let sDrag=null, sDropLine=null;
 function startStudentDrag(e,id){ e.preventDefault(); e.stopPropagation(); const nm=(state.students.find(s=>s.id===id)||{}).name||''; const g=document.createElement('div'); g.className='dragGhost'; g.textContent=nm; document.body.appendChild(g); sDrag={id,ghost:g}; sMoveGhost(e.clientX,e.clientY); window.addEventListener('pointermove',sMove,{passive:false}); window.addEventListener('pointerup',sUp); }
@@ -557,17 +556,15 @@ function renderList(){
     const isScale=it.type==='scale';
     const nm = isScale ? (scaleById(it.scaleId)?scaleById(it.scaleId).name:'(已删除音型)') : (it.title||'文本项');
     row.innerHTML='<span class="hdl" data-drag="1">⋮⋮</span><span class="tag '+(isScale?'scale':'text')+'">'+(isScale?'音阶':'文本')+'</span><span class="nm">'+escapeHtml(nm)+'</span><span class="x">✕</span>';
-    row.querySelector('.nm').onclick=()=>selectItem(it.id);
-    row.querySelector('.tag').onclick=()=>selectItem(it.id);
     row.querySelector('.x').onclick=ev=>{ ev.stopPropagation(); removeItem(it.id); };
-    row.querySelector('.hdl').addEventListener('pointerdown',ev=>startDrag(ev,{kind:'move',itemId:it.id,label:nm}));
+    row.addEventListener('pointerdown',e=>rowPress(e, ()=>selectItem(it.id), ev=>startDrag(ev,{kind:'move',itemId:it.id,label:nm})));
     list.appendChild(row);
   });
 }
 function escapeHtml(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 let curMode='kb';
-function applyModeHeights(){ const topH=$('topbar').offsetHeight||34; document.documentElement.style.setProperty('--topH',topH+'px'); const slot=$('mainSlot').offsetHeight||150; const kbBarH=$('kbBar').offsetHeight||30; const kbH=$('kbWrap').offsetHeight||200; $('main').style.height=(curMode==='top'?(slot+kbBarH+Math.round(kbH/3)):slot)+'px'; }
+function applyModeHeights(){ const tb=$('topbar'); const topH=(tb.offsetTop+tb.offsetHeight)||34; document.documentElement.style.setProperty('--topH',topH+'px'); const slot=$('mainSlot').offsetHeight||150; const kbBarH=$('kbBar').offsetHeight||30; const kbH=$('kbWrap').offsetHeight||200; $('main').style.height=(curMode==='top'?(slot+kbBarH+Math.round(kbH/3)):slot)+'px'; }
 function setMode(m){ if(curMode===m)return; curMode=m; const a=$('app'); a.classList.remove('mode-kb','mode-top'); a.classList.add('mode-'+m); applyModeHeights(); updateRightPanel(); if(m==='kb') scrollSelectedCenter(); }
 function updateRightPanel(){ const it=curStudent().items.find(i=>i.id===selItemId); const isScale=it&&it.type==='scale'&&!!scaleById(it.scaleId);
   $('scaleInfo').style.display=(curMode==='top'&&isScale)?'':'none';
@@ -597,6 +594,14 @@ function addScaleItem(scaleId,index){ const st=curStudent(); const it={id:uid(),
 function addTextItem(){ const title=prompt('文本练习项目名称（如：呼吸练习）'); if(!title)return; const st=curStudent(); st.items.push({id:uid(),type:'text',title,note:''}); renderList(); save(); }
 
 /* ===================== 拖拽（手柄）===================== */
+function rowPress(e, onTap, onDragStart){
+  if(e.target.closest('button') || e.target.classList.contains('x')) return;   // 按钮/✕ 各自响应
+  const sx=e.clientX, sy=e.clientY, id=e.pointerId; let started=false;
+  const move=(ev)=>{ if(ev.pointerId!==id||started) return; if(Math.abs(ev.clientX-sx)>6||Math.abs(ev.clientY-sy)>6){ started=true; cleanup(); onDragStart({clientX:ev.clientX,clientY:ev.clientY,pointerId:id,preventDefault(){},stopPropagation(){}}); } };
+  const up=(ev)=>{ if(ev.pointerId!==id) return; cleanup(); if(!started && onTap) onTap(); };
+  function cleanup(){ window.removeEventListener('pointermove',move); window.removeEventListener('pointerup',up); }
+  window.addEventListener('pointermove',move,{passive:true}); window.addEventListener('pointerup',up);
+}
 let drag=null;
 function startDrag(e,payload){
   e.preventDefault(); e.stopPropagation();
@@ -667,7 +672,7 @@ function renderLib(){
     row.querySelector('[data-act=edit]').onclick=()=>openEditor(sc);
     row.querySelector('[data-act=copy]').onclick=()=>{ const c={...sc,id:uid(),name:sc.name+' 副本',preset:false,steps:sc.steps.map(s=>({...s}))}; state.scales.push(c); renderLib(); save(); };
     row.querySelector('[data-act=del]').onclick=()=>{ if(confirm('删除音型「'+sc.name+'」？引用它的练习项会显示为已删除。')){ state.scales=state.scales.filter(x=>x.id!==sc.id); renderLib(); renderList(); save(); } };
-    row.querySelector('.hdl').addEventListener('pointerdown',ev=>startLibDrag(ev,sc.id));
+    row.addEventListener('pointerdown',e=>rowPress(e, null, ev=>startLibDrag(ev,sc.id)));
     wrap.appendChild(row);
   });
 }
