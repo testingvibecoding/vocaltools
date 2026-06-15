@@ -810,6 +810,7 @@ function closeOv(id){ $(id).classList.remove('show'); if(id==='edOv'){ recMode=f
 
 /* ===================== 启动 ===================== */
 async function boot(){
+  try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(_){}  // 申请持久化，降低被清理概率
   state=await idbGet();
   if(!state||!state.students||!state.scales){ state=defaultState(); idbSet(state); }
   if(!state.settings) state.settings={timbre:'syn'};
