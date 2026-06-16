@@ -666,7 +666,7 @@ function onLibMove(e){ e.preventDefault(); libGhost(e.clientX,e.clientY);
 function onLibUp(){ window.removeEventListener('pointermove',onLibMove); window.removeEventListener('pointerup',onLibUp);
   if(libDrag.ghost.parentNode)libDrag.ghost.parentNode.removeChild(libDrag.ghost); $('leftPanel').classList.remove('dropHi');
   if(libDrag.mode==='reorder'){ const list=$('libList'); const kids=[...list.children]; let li=kids.indexOf(libLine); let real; if(li<0)real=state.scales.length; else { real=0; for(let i=0;i<li;i++) if(kids[i].classList.contains('libRow'))real++; } const from=state.scales.findIndex(s=>s.id===libDrag.scaleId); if(from>=0){ const [it]=state.scales.splice(from,1); if(real>from)real--; state.scales.splice(Math.max(0,Math.min(state.scales.length,real)),0,it); renderLib(); save(); } }
-  else if(libDrag.mode==='add'){ let idx=dropIndex(); let real=idx<0?curStudent().items.length:countItemsBefore(idx); const nid=addScaleItem(libDrag.scaleId,real); selectItem(nid); toast('已加入练习列表'); closeOv('libOv'); }
+  else if(libDrag.mode==='add'){ let idx=dropIndex(); let real=idx<0?curStudent().items.length:countItemsBefore(idx); addScaleItem(libDrag.scaleId,real); toast('已加入练习列表'); }  // 拖入后不关闭，便于连续添加
   clearLibDrop(); libDrag=null; }
 function renderLib(){
   const wrap=$('libList'); wrap.innerHTML='';
