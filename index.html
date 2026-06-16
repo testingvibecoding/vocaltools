@@ -107,9 +107,14 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 .libList{display:flex;flex-direction:column;gap:5px;margin:6px 0}
 .libRow{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--line);border-radius:8px;padding:6px}
 .libRow .hdl{cursor:grab;color:var(--dim);touch-action:none;padding:4px 8px;margin:-4px 0;font-size:16px}
-.libRow .nm{flex:1;font-size:13px}
-.libRow .prev{font-size:11px;color:var(--dim)}
-.libRow button{padding:4px 7px;font-size:11px}
+.libRow .nm{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.libRow .prev{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.libRow button{padding:4px 7px;font-size:11px;flex:0 0 auto}
+@media (max-width:1023px){
+  #libOv .modal{max-width:520px;padding:10px;margin-right:8px}
+  #libList .libRow{gap:5px;padding:5px}
+  #libList .libRow button{padding:3px 6px;font-size:11px}
+}
 .libRow.curStu{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
 #lessonsCtl{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 #lessonsCtl button{min-width:0;padding:3px 8px;font-size:12px}
@@ -672,7 +677,7 @@ function renderLib(){
   const wrap=$('libList'); wrap.innerHTML='';
   state.scales.forEach(sc=>{
     const row=document.createElement('div'); row.className='libRow'; row.dataset.id=sc.id;
-    row.innerHTML='<span class="hdl">⋮⋮</span><div style="flex:1"><div class="nm">'+escapeHtml(sc.name)+(sc.preset?' <span style="font-size:10px;color:var(--dim)">预设</span>':'')+'</div><div class="prev">'+stepsToText(sc.steps)+' ｜ '+sc.gap+'ms ｜ '+(sc.artic==='staccato'?'断音':'连音')+'</div></div>'
+    row.innerHTML='<span class="hdl">⋮⋮</span><div style="flex:1;min-width:0"><div class="nm">'+escapeHtml(sc.name)+(sc.preset?' <span style="font-size:10px;color:var(--dim)">预设</span>':'')+'</div><div class="prev">'+stepsToText(sc.steps)+' ｜ '+sc.gap+'ms ｜ '+(sc.artic==='staccato'?'断音':'连音')+'</div></div>'
       +'<button data-act="add">加入</button><button data-act="prev">▶</button><button data-act="edit">编辑</button><button data-act="copy">复制</button><button class="danger" data-act="del">删</button>';
     row.querySelector('[data-act=add]').onclick=()=>{ addScaleItem(sc.id); toast('已加入「'+sc.name+'」'); };  // 不关闭，便于连续添加
     row.querySelector('[data-act=prev]').onclick=()=>{ currentScale=sc; playScale(60); };
