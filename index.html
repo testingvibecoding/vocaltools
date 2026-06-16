@@ -585,7 +585,7 @@ function setMode(m){ if(curMode===m)return; curMode=m; const a=$('app'); a.class
 function updateRightPanel(){ const it=curStudent().items.find(i=>i.id===selItemId); const isScale=it&&it.type==='scale'&&!!scaleById(it.scaleId);
   $('scaleInfo').style.display=(curMode==='top'&&isScale)?'':'none';
   const pl=$('previewLink'); if(pl) pl.onclick=e=>{e.preventDefault(); if(currentScale)playScale(60);}; }
-function scrollSelectedCenter(){ const list=$('itemList'); const el=list.querySelector('.item.sel'); if(!el)return; const phone=window.innerWidth<1024; const target=phone?(el.offsetTop-2):(el.offsetTop-(list.clientHeight/2-el.offsetHeight/2)); list.scrollTo?list.scrollTo({top:Math.max(0,target),behavior:'smooth'}):(list.scrollTop=Math.max(0,target)); }
+function scrollSelectedCenter(){ const list=$('itemList'); const el=list.querySelector('.item.sel'); if(!el)return; const lr=list.getBoundingClientRect(), er=el.getBoundingClientRect(); const relTop=(er.top-lr.top)+list.scrollTop; const phone=window.innerWidth<1024; const target=Math.max(0, phone?(relTop-2):(relTop-(list.clientHeight/2-er.height/2))); list.scrollTo?list.scrollTo({top:target,behavior:'smooth'}):(list.scrollTop=target); }
 function selectItem(id){
   selItemId=id; const st=curStudent(); const it=st.items.find(i=>i.id===id);
   renderList();
