@@ -114,6 +114,7 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
   #libOv .modal{max-width:520px;padding:10px;margin-right:8px}
   #libList .libRow{gap:5px;padding:5px}
   #libList .libRow button{padding:3px 6px;font-size:11px}
+  #mainSlot{height:112px}   /* iPhone 键盘模式仅显示约2行，键盘多一行高 */
 }
 .libRow.curStu{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
 #lessonsCtl{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
@@ -300,7 +301,7 @@ function ensureAC(){
   if(AC.state==='suspended') AC.resume();
   return AC;
 }
-function playSynth(m,t,dur){
+function playSynth(m,t,dur,out){
   const f=midiToFreq(m), o=AC.createOscillator(), o2=AC.createOscillator(), g=AC.createGain();
   o.type='triangle'; o2.type='sine'; o.frequency.value=f; o2.frequency.value=f; o2.detune.value=5;
   g.gain.setValueAtTime(0.0001,t);
@@ -308,21 +309,21 @@ function playSynth(m,t,dur){
   g.gain.exponentialRampToValueAtTime(0.2,t+0.14);
   const end=t+Math.max(dur,0.05);
   g.gain.setTargetAtTime(0.0001,end,0.12);
-  o.connect(g); o2.connect(g); g.connect(master);
+  o.connect(g); o2.connect(g); g.connect(out||master);
   o.start(t); o2.start(t); o.stop(end+0.7); o2.stop(end+0.7);
 }
-function playSample(m,t,dur){
-  if(!sampleBuf.length){ playSynth(m,t,dur); return; }
+function playSample(m,t,dur,out){
+  if(!sampleBuf.length){ playSynth(m,t,dur,out); return; }
   let best=sampleBuf[0]; for(const s of sampleBuf) if(Math.abs(s.midi-m)<Math.abs(best.midi-m)) best=s;
   const src=AC.createBufferSource(); src.buffer=best.buffer;
   src.playbackRate.value=Math.pow(2,(m-best.midi)/12);
   const g=AC.createGain(); g.gain.setValueAtTime(0.95,t);
   const end=t+Math.max(dur,0.06);
   g.gain.setTargetAtTime(0.0001,end,0.22);
-  src.connect(g); g.connect(master);
+  src.connect(g); g.connect(out||master);
   src.start(t); src.stop(end+1.5);
 }
-function playNote(m,t,dur){ ensureAC(); (timbre==='pno'&&pnoReady)?playSample(m,t,dur):playSynth(m,t,dur); }
+function playNote(m,t,dur,out){ ensureAC(); (timbre==='pno'&&pnoReady)?playSample(m,t,dur,out):playSynth(m,t,dur,out); }
 function b64buf(b64){ const bin=atob(b64),u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i); return u.buffer; }
 async function loadPiano(){
   if(pnoReady||pnoLoading){ return; }
@@ -486,16 +487,19 @@ function onKeyTap(m){
 }
 
 /* —— 播放音阶 —— */
-let curTimers=[];
+let curTimers=[], scaleBus=null;
 function clearTimers(){ curTimers.forEach(clearTimeout); curTimers=[]; for(const k in keyEl) litKey(+k,false); }
+function killScaleBus(){ if(scaleBus){ try{ const g=scaleBus.gain, n=AC.currentTime; g.cancelScheduledValues(n); g.setValueAtTime(g.value,n); g.linearRampToValueAtTime(0,n+0.03); const old=scaleBus; setTimeout(()=>{ try{old.disconnect();}catch(_){} },250); }catch(_){} scaleBus=null; } }
 function playScale(startM){
   const sc=currentScale; if(!sc){ playNote(startM,AC.currentTime,0.6); return; }
-  ensureAC(); clearTimers();
+  ensureAC(); clearTimers(); killScaleBus();        // 立刻结束上一条音阶
+  scaleBus=AC.createGain(); scaleBus.gain.value=1; scaleBus.connect(master);
+  const bus=scaleBus;
   const gap=(sc.gap/1000)*(100/speed); const t0=AC.currentTime+0.05; let t=t0, acc=0;
   sc.steps.forEach(st=>{
     const m=startM+st.semi;
     const dur = sc.artic==='staccato' ? Math.min(0.2,gap*0.45) : st.dur*gap*0.96;
-    playNote(m,t,dur);
+    playNote(m,t,dur,bus);
     const delay=acc*1000;
     curTimers.push(setTimeout(()=>{ litKey(m,true); },delay)); // 不自动移动键盘，移位交给用户
     curTimers.push(setTimeout(()=>litKey(m,false), delay+Math.max(140,dur*1000)));
@@ -581,7 +585,7 @@ function setMode(m){ if(curMode===m)return; curMode=m; const a=$('app'); a.class
 function updateRightPanel(){ const it=curStudent().items.find(i=>i.id===selItemId); const isScale=it&&it.type==='scale'&&!!scaleById(it.scaleId);
   $('scaleInfo').style.display=(curMode==='top'&&isScale)?'':'none';
   const pl=$('previewLink'); if(pl) pl.onclick=e=>{e.preventDefault(); if(currentScale)playScale(60);}; }
-function scrollSelectedCenter(){ const list=$('itemList'); const el=list.querySelector('.item.sel'); if(!el)return; const target=el.offsetTop-(list.clientHeight/2-el.offsetHeight/2); list.scrollTo?list.scrollTo({top:Math.max(0,target),behavior:'smooth'}):(list.scrollTop=Math.max(0,target)); }
+function scrollSelectedCenter(){ const list=$('itemList'); const el=list.querySelector('.item.sel'); if(!el)return; const phone=window.innerWidth<1024; const target=phone?(el.offsetTop-2):(el.offsetTop-(list.clientHeight/2-el.offsetHeight/2)); list.scrollTo?list.scrollTo({top:Math.max(0,target),behavior:'smooth'}):(list.scrollTop=Math.max(0,target)); }
 function selectItem(id){
   selItemId=id; const st=curStudent(); const it=st.items.find(i=>i.id===id);
   renderList();
