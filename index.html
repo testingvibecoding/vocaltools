@@ -41,9 +41,9 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 .phead{font-size:11px;color:var(--dim);letter-spacing:1px;margin:0 0 4px;display:flex;align-items:center;gap:6px}
 .phead .grow{flex:1}
 #itemList{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding-right:2px}
-.item{display:flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:6px 6px;font-size:13px;touch-action:none}
+.item{display:flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:6px 6px;font-size:13px}
 .item.sel{border-color:var(--acc);background:var(--bg3);box-shadow:0 0 0 1px var(--acc) inset}
-.item .hdl{cursor:grab;color:var(--dim);font-size:14px;padding:0 2px;touch-action:none}
+.item .hdl{cursor:grab;color:var(--dim);font-size:16px;padding:4px 8px;margin:-4px 0;touch-action:none}
 .item .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .item .tag{font-size:10px;padding:1px 5px;border-radius:6px;background:var(--bg3);color:var(--dim)}
 .item .tag.scale{color:var(--acc2)}
@@ -105,8 +105,8 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 .modal input[type=text]{flex:1;min-width:120px;background:var(--bg3);border:1px solid var(--line);border-radius:8px;padding:7px;font-size:14px}
 .modal input[type=range]{flex:1}
 .libList{display:flex;flex-direction:column;gap:5px;margin:6px 0}
-.libRow{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--line);border-radius:8px;padding:6px;touch-action:none}
-.libRow .hdl{cursor:grab;color:var(--dim);touch-action:none;padding:0 2px}
+.libRow{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--line);border-radius:8px;padding:6px}
+.libRow .hdl{cursor:grab;color:var(--dim);touch-action:none;padding:4px 8px;margin:-4px 0;font-size:16px}
 .libRow .nm{flex:1;font-size:13px}
 .libRow .prev{font-size:11px;color:var(--dim)}
 .libRow button{padding:4px 7px;font-size:11px}
@@ -544,8 +544,9 @@ function addStudent(){ const n=prompt('新学生姓名'); if(!n)return; const id
 function renderStudentList(){ const wrap=$('studentList'); if(!wrap)return; wrap.innerHTML='';
   state.students.forEach(s=>{ const row=document.createElement('div'); row.className='libRow'+(s.id===state.curStudent?' curStu':''); row.dataset.id=s.id;
     row.innerHTML='<span class="hdl">⋮⋮</span><div class="nm" style="flex:1">'+escapeHtml(s.name)+(s.id===state.curStudent?' <span style="font-size:10px;color:var(--acc2)">当前</span>':'')+'</div><button data-act="ren">改名</button>';
+    row.querySelector('.nm').onclick=()=>{ switchStudent(s.id); closeOv('studentOv'); };
     row.querySelector('[data-act=ren]').onclick=()=>{ const v=prompt('学生姓名',s.name); if(v&&v.trim()){ s.name=v.trim(); save(); renderStudentList(); renderStudents(); } };
-    row.addEventListener('pointerdown',e=>rowPress(e, ()=>{ switchStudent(s.id); closeOv('studentOv'); }, ev=>startStudentDrag(ev,s.id)));
+    row.querySelector('.hdl').addEventListener('pointerdown',e=>rowPress(e, null, ev=>startStudentDrag(ev,s.id)));
     wrap.appendChild(row); }); }
 let sDrag=null, sDropLine=null;
 function startStudentDrag(e,id){ e.preventDefault(); e.stopPropagation(); const nm=(state.students.find(s=>s.id===id)||{}).name||''; const g=document.createElement('div'); g.className='dragGhost'; g.textContent=nm; document.body.appendChild(g); sDrag={id,ghost:g}; sMoveGhost(e.clientX,e.clientY); window.addEventListener('pointermove',sMove,{passive:false}); window.addEventListener('pointerup',sUp); }
@@ -560,8 +561,10 @@ function renderList(){
     const isScale=it.type==='scale';
     const nm = isScale ? (scaleById(it.scaleId)?scaleById(it.scaleId).name:'(已删除音型)') : (it.title||'文本项');
     row.innerHTML='<span class="hdl" data-drag="1">⋮⋮</span><span class="tag '+(isScale?'scale':'text')+'">'+(isScale?'音阶':'文本')+'</span><span class="nm">'+escapeHtml(nm)+'</span><span class="x">✕</span>';
+    row.querySelector('.nm').onclick=()=>selectItem(it.id);
+    row.querySelector('.tag').onclick=()=>selectItem(it.id);
     row.querySelector('.x').onclick=ev=>{ ev.stopPropagation(); removeItem(it.id); };
-    row.addEventListener('pointerdown',e=>rowPress(e, ()=>selectItem(it.id), ev=>startDrag(ev,{kind:'move',itemId:it.id,label:nm})));
+    row.querySelector('.hdl').addEventListener('pointerdown',e=>rowPress(e, null, ev=>startDrag(ev,{kind:'move',itemId:it.id,label:nm})));
     list.appendChild(row);
   });
 }
@@ -676,7 +679,7 @@ function renderLib(){
     row.querySelector('[data-act=edit]').onclick=()=>openEditor(sc);
     row.querySelector('[data-act=copy]').onclick=()=>{ const c={...sc,id:uid(),name:sc.name+' 副本',preset:false,steps:sc.steps.map(s=>({...s}))}; state.scales.push(c); renderLib(); save(); };
     row.querySelector('[data-act=del]').onclick=()=>{ if(confirm('删除音型「'+sc.name+'」？引用它的练习项会显示为已删除。')){ state.scales=state.scales.filter(x=>x.id!==sc.id); renderLib(); renderList(); save(); } };
-    row.addEventListener('pointerdown',e=>rowPress(e, null, ev=>startLibDrag(ev,sc.id)));
+    row.querySelector('.hdl').addEventListener('pointerdown',e=>rowPress(e, null, ev=>startLibDrag(ev,sc.id)));
     wrap.appendChild(row);
   });
 }
