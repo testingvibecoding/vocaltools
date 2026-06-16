@@ -572,11 +572,11 @@ function escapeHtml(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':
 
 let curMode='kb';
 function applyModeHeights(){ const tb=$('topbar'); const topH=(tb.offsetTop+tb.offsetHeight)||34; document.documentElement.style.setProperty('--topH',topH+'px'); const slot=$('mainSlot').offsetHeight||150; const kbBarH=$('kbBar').offsetHeight||30; const kbH=$('kbWrap').offsetHeight||200; $('main').style.height=(curMode==='top'?(slot+kbBarH+Math.round(kbH/3)):slot)+'px'; }
-function setMode(m){ if(curMode===m)return; curMode=m; const a=$('app'); a.classList.remove('mode-kb','mode-top'); a.classList.add('mode-'+m); applyModeHeights(); updateRightPanel(); if(m==='kb') scrollSelectedCenter(); }
+function setMode(m){ if(curMode===m)return; curMode=m; const a=$('app'); a.classList.remove('mode-kb','mode-top'); a.classList.add('mode-'+m); applyModeHeights(); updateRightPanel(); if(m==='kb'){ scrollSelectedCenter(); setTimeout(scrollSelectedCenter,320); } }  // 过渡结束后再居中一次
 function updateRightPanel(){ const it=curStudent().items.find(i=>i.id===selItemId); const isScale=it&&it.type==='scale'&&!!scaleById(it.scaleId);
   $('scaleInfo').style.display=(curMode==='top'&&isScale)?'':'none';
   const pl=$('previewLink'); if(pl) pl.onclick=e=>{e.preventDefault(); if(currentScale)playScale(60);}; }
-function scrollSelectedCenter(){ const list=$('itemList'); const el=list.querySelector('.item.sel'); if(!el)return; const t=el.offsetTop-(list.clientHeight/2-el.offsetHeight/2); list.scrollTop=Math.max(0,t); }
+function scrollSelectedCenter(){ const list=$('itemList'); const el=list.querySelector('.item.sel'); if(!el)return; const target=el.offsetTop-(list.clientHeight/2-el.offsetHeight/2); list.scrollTo?list.scrollTo({top:Math.max(0,target),behavior:'smooth'}):(list.scrollTop=Math.max(0,target)); }
 function selectItem(id){
   selItemId=id; const st=curStudent(); const it=st.items.find(i=>i.id===id);
   renderList();
@@ -674,7 +674,7 @@ function renderLib(){
     const row=document.createElement('div'); row.className='libRow'; row.dataset.id=sc.id;
     row.innerHTML='<span class="hdl">⋮⋮</span><div style="flex:1"><div class="nm">'+escapeHtml(sc.name)+(sc.preset?' <span style="font-size:10px;color:var(--dim)">预设</span>':'')+'</div><div class="prev">'+stepsToText(sc.steps)+' ｜ '+sc.gap+'ms ｜ '+(sc.artic==='staccato'?'断音':'连音')+'</div></div>'
       +'<button data-act="add">加入</button><button data-act="prev">▶</button><button data-act="edit">编辑</button><button data-act="copy">复制</button><button class="danger" data-act="del">删</button>';
-    row.querySelector('[data-act=add]').onclick=()=>{ const nid=addScaleItem(sc.id); selectItem(nid); toast('已加入「'+sc.name+'」'); closeOv('libOv'); };
+    row.querySelector('[data-act=add]').onclick=()=>{ addScaleItem(sc.id); toast('已加入「'+sc.name+'」'); };  // 不关闭，便于连续添加
     row.querySelector('[data-act=prev]').onclick=()=>{ currentScale=sc; playScale(60); };
     row.querySelector('[data-act=edit]').onclick=()=>openEditor(sc);
     row.querySelector('[data-act=copy]').onclick=()=>{ const c={...sc,id:uid(),name:sc.name+' 副本',preset:false,steps:sc.steps.map(s=>({...s}))}; state.scales.push(c); renderLib(); save(); };
