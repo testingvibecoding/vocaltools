@@ -59,15 +59,15 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 #itemTitle{display:none!important}
 /* keyboard bar */
 #kbBar{display:flex;align-items:center;gap:8px;padding:4px 8px;background:var(--bg2);border-top:1px solid var(--line);font-size:12px;flex-wrap:nowrap;overflow:hidden}
-#kbBar .scaleLabel{color:var(--acc2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1 1 auto;min-width:0}
+#kbBar .scaleLabel{color:var(--acc2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;min-width:0}
 #kbBar .status{color:var(--dim);white-space:nowrap;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
 #kbBar .status.rec{color:var(--hot);font-weight:600}
 #kbBar .status.pass{color:var(--warn);font-weight:600}
 .kbhint{font-size:11px;color:var(--dim);white-space:nowrap;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
-#kbBar button,#kbBar .seg,#speedCtl{flex:0 0 auto;white-space:nowrap}
-#speedCtl{display:flex;gap:4px;align-items:center}
-#speedCtl button{padding:3px 8px;font-size:12px;min-width:0}
-#speedCtl .num{font-weight:700;color:var(--acc2);font-size:12px;min-width:46px;text-align:center}
+#kbBar button,#kbBar .seg{flex:0 0 auto;white-space:nowrap}
+#speedSlider{flex:1 1 auto;min-width:60px;accent-color:var(--acc)}
+#speedGroup{display:flex;align-items:center;gap:6px;flex:1 1 auto;min-width:90px}
+#speedVal{flex:0 0 auto;min-width:42px;text-align:right;color:var(--acc2);font-weight:700;font-size:12px}
 .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{border:0;border-radius:0;padding:5px 9px;font-size:12px;background:var(--bg3)}
 .seg button.on{background:var(--acc);color:#fff}
@@ -88,6 +88,9 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 .key .lab{pointer-events:none;font-variant-numeric:tabular-nums;position:relative;z-index:1}
 .key.w .lab{font-size:15px}
 .key.b .lab{font-size:11px}
+.key.b .blab{display:flex;flex-direction:column;justify-content:flex-end;width:100%;font-size:13px;font-weight:700;line-height:1.18;letter-spacing:-.3px;overflow:hidden;padding:0 4px 3px}
+.key.b .blab .sh{align-self:center;transform:translateX(-28%)}
+.key.b .blab .fl{align-self:center;transform:translateX(28%)}
 .key.cKey .lab{color:var(--acc);font-weight:700}
 .key.pass::after{content:"";position:absolute;left:0;right:0;bottom:0;height:32px;background:var(--warn);border-radius:0 0 5px 5px;z-index:0}
 .key.b.pass::after{height:24px;border-radius:0 0 4px 4px}
@@ -173,10 +176,8 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
     </div>
     <button id="manualBtn" style="padding:5px 9px">手动输入</button>
     <span class="scaleLabel" id="scaleLabel">未选练习</span>
-    <span class="spacer"></span>
-    <span class="kbhint">↔ 按住琴键可左右拖动键盘位置</span>
-    <span class="kbhint">速度</span>
-    <span id="speedCtl"></span>
+    <span class="kbhint" id="dblHint" style="color:var(--acc2)">双击=单音</span>
+    <span id="speedGroup"><span class="kbhint">速度</span><input type="range" id="speedSlider" min="50" max="300" step="5" value="100"><span id="speedVal">100%</span></span>
     <span class="status" id="kbStatus"></span>
     <button id="passCloseBtn" style="display:none;padding:4px 10px">关闭</button>
   </div>
@@ -295,9 +296,9 @@ function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('sho
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
 /* ===================== 音频引擎 ===================== */
-let AC=null, master=null, timbre='syn', pnoReady=false, pnoLoading=false, sampleBuf=[], volume=0.9, speed=100;
+let AC=null, master=null, timbre='syn', pnoReady=false, pnoLoading=false, sampleBuf=[], volume=2.7, speed=100, dblM=null, dblT=0, dblTimer=null;
 function ensureAC(){
-  if(!AC){ AC=new (window.AudioContext||window.webkitAudioContext)(); master=AC.createGain(); master.gain.value=volume; master.connect(AC.destination); }
+  if(!AC){ AC=new (window.AudioContext||window.webkitAudioContext)(); master=AC.createGain(); master.gain.value=volume; const comp=AC.createDynamicsCompressor(); comp.threshold.value=-8; comp.knee.value=24; comp.ratio.value=12; comp.attack.value=0.003; comp.release.value=0.25; master.connect(comp); comp.connect(AC.destination); }
   if(AC.state==='suspended') AC.resume();
   return AC;
 }
@@ -427,17 +428,18 @@ const kbInner=$('kbInner'), kbView=$('kbViewport');
 let keyEl={}, keyX={}, keyW={}, innerW=0, panX=0, WKW=58, BKW=34;
 const WOFF={0:0,2:1,4:2,5:3,7:4,9:5,11:6};        // 白键在八度内的序号
 const BCEN={1:0.9,3:2.1,6:3.8,8:5.0,10:6.2};       // 黑键中心（白键宽为单位，自该八度C左缘起，仿真实钢琴偏移）
+const BLACKNAME={1:['C♯','D♭'],3:['D♯','E♭'],6:['F♯','G♭'],8:['G♯','A♭'],10:['A♯','B♭']};
 function cLeftIndex(m){ return 7*Math.floor(m/12)-12; } // 该音所在八度C的白键序号（以A0=0为基准）
-function octavesToShow(){ const w=window.innerWidth||1024; if(w<1024) return 1.5; if(w<1180) return 1.8; return 2; } // iPhone1.5 / iPad mini1.8 / 完整iPad2
+function octavesToShow(){ const w=window.innerWidth||1024; if(w<1024) return 1.5; if(w<1180) return 1.8; if(w<1300) return 2; return 2.5; } // iPhone1.5 / mini1.8 / 11"iPad2 / 13"iPad2.5
 function buildKeyboard(){
   const vw=kbView.clientWidth||window.innerWidth||1024;
-  WKW=Math.max(30, vw/(octavesToShow()*7)); BKW=WKW*0.62;
+  WKW=Math.max(30, vw/(octavesToShow()*7)); BKW=WKW*0.74;
   kbInner.innerHTML=''; keyEl={}; keyX={}; keyW={}; let maxIdx=0;
   for(let m=LO;m<=HI;m++){ if(isBlack(m))continue; const idx=cLeftIndex(m)+WOFF[m%12]; keyX[m]=idx*WKW; keyW[m]=WKW; if(idx>maxIdx)maxIdx=idx;
     const d=document.createElement('div'); d.className='key w'+(m%12===0?' cKey':''); d.style.left=keyX[m]+'px'; d.style.width=WKW+'px'; d.dataset.m=m; d.innerHTML='<span class="lab">'+gbName(m)+'</span>'; kbInner.appendChild(d); keyEl[m]=d; }
   innerW=(maxIdx+1)*WKW; kbInner.style.width=innerW+'px';
   for(let m=LO;m<=HI;m++){ if(!isBlack(m))continue; const cen=(cLeftIndex(m)+BCEN[m%12])*WKW; keyX[m]=cen-BKW/2; keyW[m]=BKW;
-    const d=document.createElement('div'); d.className='key b'; d.style.left=keyX[m]+'px'; d.style.width=BKW+'px'; d.dataset.m=m; d.innerHTML='<span class="lab">'+gbName(m)+'</span>'; kbInner.appendChild(d); keyEl[m]=d; }
+    const d=document.createElement('div'); d.className='key b'; d.style.left=keyX[m]+'px'; d.style.width=BKW+'px'; d.dataset.m=m; const bn=BLACKNAME[m%12]||['','']; d.innerHTML='<span class="lab blab"><span class="sh">'+bn[0]+'</span><span class="fl">'+bn[1]+'</span></span>'; kbInner.appendChild(d); keyEl[m]=d; }
   applyPassaggio(); centerOn(60,false);
 }
 function clampPan(x){ const vw=kbView.clientWidth; const min=Math.min(0,vw-innerW); return Math.max(min,Math.min(0,x)); }
@@ -466,7 +468,7 @@ kbView.addEventListener('pointermove',e=>{
   const p=pointers[e.pointerId]; if(!p) return;
   const dx=e.clientX-p.x;
   if(Math.abs(dx)>6||Math.abs(e.clientY-p.y)>10) p.moved=true;
-  if(p.moved) setPan(p.pan+dx,false);
+  if(p.moved && (currentScale||passMode||recMode)) setPan(p.pan+dx,false);  // 手动模式不按键拖动，用紫条
 });
 function endKbPointer(e){
   const p=pointers[e.pointerId]; if(!p) return; delete pointers[e.pointerId];
@@ -483,7 +485,11 @@ function onKeyTap(m){
     return; }
   if(recMode){ recordNote(m); flashDown(m); playNote(m,AC.currentTime,0.5); return; }
   flashDown(m);
-  if(currentScale) playScale(m); else playNote(m,AC.currentTime,0.6);
+  if(currentScale){
+    const now=performance.now();
+    if(dblM===m && now-dblT<360){ if(dblTimer){clearTimeout(dblTimer);dblTimer=null;} killScaleBus(); clearTimers(); playNote(m,AC.currentTime,0.9); dblM=null; dblT=0; return; }  // 双击=仅一个单音（音阶未起奏）
+    dblM=m; dblT=now; if(dblTimer)clearTimeout(dblTimer); dblTimer=setTimeout(()=>{ dblTimer=null; dblM=null; playScale(m); },300);   // 先等0.30s判断是否双击
+  } else playNote(m,AC.currentTime,0.6);
 }
 
 /* —— 播放音阶 —— */
@@ -520,7 +526,7 @@ $('posBar').addEventListener('pointerup',()=>posDrag=false);
 /* ===================== 换声点编辑 ===================== */
 let passMode=false;
 function togglePassMode(){ passMode=!passMode; recMode=false; $('passBtn').classList.toggle('pri',passMode);
-  setStatus(passMode?'换声点编辑中，请点击新换声点':''); $('kbStatus').classList.toggle('pass',passMode); $('passCloseBtn').style.display=passMode?'':'none'; }
+  setStatus(passMode?'换声点编辑中，请点击新换声点':''); $('kbStatus').classList.toggle('pass',passMode); $('passCloseBtn').style.display=passMode?'':'none'; const sg=$('speedGroup'); if(sg) sg.style.display=passMode?'none':''; const dh=$('dblHint'); if(dh) dh.style.display=(!passMode&&currentScale)?'':'none'; }
 function togglePassaggio(m){ const st=curStudent(); if(!st)return;
   if(st.passaggio.length===1 && st.passaggio[0]===m) st.passaggio=[];   // 再点同一键=取消
   else st.passaggio=[m];                                               // 选新点立即替换旧点（只保留一个）
@@ -584,6 +590,7 @@ function applyModeHeights(){ const tb=$('topbar'); const topH=(tb.offsetTop+tb.o
 function setMode(m){ if(curMode===m)return; curMode=m; const a=$('app'); a.classList.remove('mode-kb','mode-top'); a.classList.add('mode-'+m); applyModeHeights(); updateRightPanel(); if(m==='kb'){ scrollSelectedCenter(); setTimeout(scrollSelectedCenter,320); } }  // 过渡结束后再居中一次
 function updateRightPanel(){ const it=curStudent().items.find(i=>i.id===selItemId); const isScale=it&&it.type==='scale'&&!!scaleById(it.scaleId);
   $('scaleInfo').style.display=(curMode==='top'&&isScale)?'':'none';
+  const dh=$('dblHint'); if(dh) dh.style.display=currentScale?'':'none';
   const pl=$('previewLink'); if(pl) pl.onclick=e=>{e.preventDefault(); if(currentScale)playScale(60);}; }
 function scrollSelectedCenter(){ const list=$('itemList'); const el=list.querySelector('.item.sel'); if(!el)return; const lr=list.getBoundingClientRect(), er=el.getBoundingClientRect(); const relTop=(er.top-lr.top)+list.scrollTop; const phone=window.innerWidth<1024; const target=Math.max(0, phone?(relTop-2):(relTop-(list.clientHeight/2-er.height/2))); list.scrollTo?list.scrollTo({top:target,behavior:'smooth'}):(list.scrollTop=target); }
 function selectItem(id){
@@ -601,7 +608,8 @@ function selectItem(id){
     $('scaleLabel').textContent='（文本项目：'+escapeHtml(it.title||'')+'）';
   }
   $('itemNote').value=it.note||'';
-  updateRightPanel(); if(curMode==='kb') scrollSelectedCenter();
+  if(it.type==='scale') speed=(it.speed!=null?it.speed:100);
+  updateRightPanel(); updateSpeedUI(); if(curMode==='kb') scrollSelectedCenter();
 }
 $('itemNote').addEventListener('input',()=>{ const st=curStudent(); const it=st.items.find(i=>i.id===selItemId); if(it){ it.note=$('itemNote').value; save(); } });
 
@@ -754,16 +762,7 @@ function renderLessons(){
     c.appendChild(mk('清除',()=>{ st.lessons=null; save(); renderLessons(); },'danger'));
   }
 }
-function askSpeed(cur){ let n=prompt('播放速度 %（50–300）', String(cur)); while(n!==null){ const x=parseInt(n,10); if(!isNaN(x)&&/^\s*\d+\s*$/.test(n)) return x; n=prompt('请输入数字（50–300）', n||''); } return null; }
-function setSpeed(v){ v=Math.round(v/10)*10; speed=Math.max(50,Math.min(300,v)); if(state&&state.settings){ state.settings.speed=speed; save(); } renderSpeed(); }
-function renderSpeed(){ const c=$('speedCtl'); if(!c)return; c.innerHTML='';
-  const mk=(txt,fn)=>{ const b=document.createElement('button'); b.textContent=txt; b.onclick=fn; return b; };
-  c.appendChild(mk('◀',()=>setSpeed(speed-10)));
-  const num=document.createElement('button'); num.className='num'; num.textContent=speed+'%'; num.title='点击手动编辑速度';
-  num.onclick=()=>{ const x=askSpeed(speed); if(x!=null) setSpeed(x); };
-  c.appendChild(num);
-  c.appendChild(mk('▶',()=>setSpeed(speed+10)));
-}
+function updateSpeedUI(){ const sl=$('speedSlider'); if(sl) sl.value=speed; const v=$('speedVal'); if(v) v.textContent=speed+'%'; }
 function setVol(d){ ensureAC(); volume=Math.max(0,Math.min(1,Math.round((volume+d)*10)/10)); if(master) master.gain.value=volume; if(state&&state.settings){ state.settings.volume=volume; save(); } toast('钢琴音量 '+Math.round(volume*100)+'%'); }
 function bind(){
   $('main').addEventListener('pointerdown',()=>setMode('top'));
@@ -784,6 +783,7 @@ function bind(){
   $('libOv').addEventListener('click',e=>{ if(e.target===$('libOv')) closeOv('libOv'); });  // 点弹窗外关闭
   $('newScaleBtn').onclick=()=>openEditor(null);
   $('manualBtn').onclick=()=>{ currentScale=null; selItemId=null; renderList(); $('scaleLabel').textContent='手动弹奏'; $('itemNote').value=''; updateRightPanel(); };
+  $('speedSlider').oninput=()=>{ speed=+$('speedSlider').value; $('speedVal').textContent=speed+'%'; const st=curStudent(); const it=st.items.find(i=>i.id===selItemId); if(it&&it.type==='scale'){ it.speed=speed; save(); } };
   $('exportBtn').onclick=doExport;
   $('importBtn').onclick=()=>$('importFile').click();
   $('importFile').onchange=e=>{ if(e.target.files[0]) doImport(e.target.files[0]); e.target.value=''; };
@@ -830,10 +830,10 @@ async function boot(){
   else if(state.settings.gapV===1){ state.scales.forEach(s=>{ if(s.preset) s.gap=Math.round(s.gap*0.8); }); state.settings.gapV=2; idbSet(state); }  // 上一版(×1.5)→再 ×0.8
   if(!state.settings.noteV){ state.students.forEach(s=>{ if(typeof s.globalNote==='string'){ let g=s.globalNote.replace(/^\s*剩余课时：[^\n]*\n?/,'').replace(/^\s*注意事项：/,''); s.globalNote=g.trim(); } }); state.settings.noteV=1; idbSet(state); }  // 清除旧备注模板文字
   timbre='syn';   // 启动一律默认合成音（不恢复采样钢琴）
-  volume=(state.settings.volume!=null?state.settings.volume:0.9);
-  speed=(state.settings.speed!=null?state.settings.speed:100);
+  volume=2.7;
+  speed=100;
   $('app').classList.add('mode-kb');
-  buildKeyboard(); renderAll(); bind(); applyModeHeights(); renderSpeed();
+  buildKeyboard(); renderAll(); bind(); applyModeHeights(); updateSpeedUI();
   setTimeout(()=>{ setPan(panX,false); centerOn(60,false); applyModeHeights(); },60);
 }
 window.addEventListener('load',boot);
