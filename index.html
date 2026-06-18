@@ -463,13 +463,13 @@ kbView.addEventListener('pointerdown',e=>{
   const p={x:e.clientX,y:e.clientY,pan:panX,moved:false,m,activate:wasTop,sounded:false};
   pointers[e.pointerId]=p;
   try{ kbView.setPointerCapture(e.pointerId); }catch(_){}
-  if(m!=null && !currentScale && !passMode && !recMode && !wasTop){ flashDown(m); playNote(m,AC.currentTime,0.9); p.sounded=true; }  // 手动模式：按下即响，多指可同时（和弦）
+  if(m!=null && !wasTop && !passMode && !recMode){ if(currentScale){ triggerScaleDown(m); } else { flashDown(m); playNote(m,AC.currentTime,0.9); } p.sounded=true; }  // 按下即触发；和弦仅手动模式
 });
 kbView.addEventListener('pointermove',e=>{
   const p=pointers[e.pointerId]; if(!p) return;
   const dx=e.clientX-p.x;
   if(Math.abs(dx)>6||Math.abs(e.clientY-p.y)>10) p.moved=true;
-  if(p.moved && (currentScale||passMode||recMode)) setPan(p.pan+dx,false);  // 手动模式不按键拖动，用紫条
+  if(p.moved && (passMode||recMode)) setPan(p.pan+dx,false);  // 按键=起奏；平移用紫色滑条
 });
 function endKbPointer(e){
   const p=pointers[e.pointerId]; if(!p) return; delete pointers[e.pointerId];
@@ -485,12 +485,12 @@ function onKeyTap(m){
             else { st.passaggio=[m]; applyPassaggio(); save(); togglePassMode(); } }                          // 选新点=设定并退出
     return; }
   if(recMode){ recordNote(m); flashDown(m); playNote(m,AC.currentTime,0.5); return; }
-  flashDown(m);
-  if(currentScale){
-    const now=performance.now();
-    if(dblM===m && now-dblT<360){ if(dblTimer){clearTimeout(dblTimer);dblTimer=null;} killScaleBus(); clearTimers(); playNote(m,AC.currentTime,0.9); dblM=null; dblT=0; return; }  // 双击=仅一个单音（音阶未起奏）
-    dblM=m; dblT=now; if(dblTimer)clearTimeout(dblTimer); dblTimer=setTimeout(()=>{ dblTimer=null; dblM=null; playScale(m); },300);   // 先等0.30s判断是否双击
-  } else playNote(m,AC.currentTime,0.6);
+  if(currentScale){ triggerScaleDown(m); } else { flashDown(m); playNote(m,AC.currentTime,0.6); }
+}
+function triggerScaleDown(m){
+  const now=performance.now();
+  if(dblM===m && now-dblT<400){ clearTimers(); dblM=null; dblT=0; return; }  // 双击=取消后续音，只留已响的首音(单音)
+  dblM=m; dblT=now; playScale(m);                                           // 按下即奏，无延迟
 }
 
 /* —— 播放音阶 —— */
@@ -502,15 +502,14 @@ function playScale(startM){
   ensureAC(); clearTimers(); killScaleBus();        // 立刻结束上一条音阶
   scaleBus=AC.createGain(); scaleBus.gain.value=1; scaleBus.connect(master);
   const bus=scaleBus;
-  const gap=(sc.gap/1000)*(100/speed); const t0=AC.currentTime+0.05; let t=t0, acc=0;
-  sc.steps.forEach(st=>{
+  const gap=(sc.gap/1000)*(100/speed); let acc=0;
+  sc.steps.forEach((st,idx)=>{
     const m=startM+st.semi;
     const dur = sc.artic==='staccato' ? Math.min(0.2,gap*0.45) : st.dur*gap*0.96;
-    playNote(m,t,dur,bus);
     const delay=acc*1000;
-    curTimers.push(setTimeout(()=>{ litKey(m,true); },delay)); // 不自动移动键盘，移位交给用户
-    curTimers.push(setTimeout(()=>litKey(m,false), delay+Math.max(140,dur*1000)));
-    t+=st.dur*gap; acc+=st.dur*gap;
+    if(idx===0){ playNote(m,AC.currentTime,dur,bus); litKey(m,true); curTimers.push(setTimeout(()=>litKey(m,false),Math.max(140,dur*1000))); }   // 首音立即响
+    else { curTimers.push(setTimeout(()=>{ playNote(m,AC.currentTime,dur,bus); litKey(m,true); curTimers.push(setTimeout(()=>litKey(m,false),Math.max(140,dur*1000))); }, delay)); }  // 后续音用定时器→双击可取消
+    acc+=st.dur*gap;
   });
 }
 function ensureVisible(m){ const cx=(keyX[m]||0)+(keyW[m]||WKW)/2; const vw=kbView.clientWidth;
