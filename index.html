@@ -64,6 +64,8 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 #kbBar .status.rec{color:var(--hot);font-weight:600}
 #kbBar .status.pass{color:var(--warn);font-weight:600}
 .kbhint{font-size:11px;color:var(--dim);white-space:nowrap;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.lockbtn{flex:0 0 auto;padding:5px 8px;font-size:14px;opacity:.4;filter:grayscale(1)}
+.lockbtn.on{opacity:1;filter:none;background:var(--acc);border-color:var(--acc)}
 #kbBar button,#kbBar .seg{flex:0 0 auto;white-space:nowrap}
 #speedSlider{flex:1 1 auto;min-width:60px;accent-color:var(--acc)}
 #speedGroup{display:flex;align-items:center;gap:6px;flex:1 1 auto;min-width:90px}
@@ -176,6 +178,7 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
       <button data-t="pno">采样钢琴</button>
     </div>
     <button id="manualBtn" style="padding:5px 9px">手动输入</button>
+    <button id="lockBtn" class="lockbtn" title="锁定键盘左右位置（音阶模式）">🔓</button>
     <span class="scaleLabel" id="scaleLabel">未选练习</span>
     <span class="kbhint" id="dblHint" style="color:var(--acc2)">双击=单音</span>
     <span id="speedGroup"><span class="kbhint">速度</span><button id="spdDown" class="spdbtn">◀</button><input type="range" id="speedSlider" min="50" max="300" step="5" value="100"><button id="spdUp" class="spdbtn">▶</button><span id="speedVal">100%</span></span>
@@ -456,23 +459,33 @@ function litKey(m,on){ const e=keyEl[m]; if(e) e.classList.toggle('lit',on); }
 function flashDown(m){ const e=keyEl[m]; if(!e)return; e.classList.add('down'); setTimeout(()=>e.classList.remove('down'),140); }
 
 /* —— 键盘指针：拖动平移 / 点按触发 —— */
-let pointers={};   // 支持多点触控（和弦）：每个指针独立判定
+let pointers={}, kbLock=false;   // 多点触控 + 键盘锁定（音阶模式）
 kbView.addEventListener('pointerdown',e=>{
   ensureAC(); const wasTop=(curMode!=='kb'); setMode('kb');
   const m=keyFromEvent(e);
-  const p={x:e.clientX,y:e.clientY,pan:panX,moved:false,m,activate:wasTop,sounded:false};
+  const p={x:e.clientX,y:e.clientY,pan:panX,moved:false,m,activate:wasTop,sounded:false,playTimer:null,lastM:null};
   pointers[e.pointerId]=p;
   try{ kbView.setPointerCapture(e.pointerId); }catch(_){}
-  if(m!=null && !wasTop && !passMode && !recMode){ if(currentScale){ triggerScaleDown(m); } else { flashDown(m); playNote(m,AC.currentTime,0.9); } p.sounded=true; }  // 按下即触发；和弦仅手动模式
+  if(m==null || wasTop || passMode || recMode) return;   // activate/换声点/录入 在抬起时处理
+  if(currentScale){
+    if(kbLock){ triggerScaleDown(m); p.sounded=true; }                                                   // 锁定：按下即奏
+    else { scheduleScaleTap(m,p); }    // 解锁：等约双击时长后起奏；其间滑动=平移不出声、双击=仅单音
+  } else { flashDown(m); playNote(m,AC.currentTime,0.9); p.sounded=true; p.lastM=m; }                       // 手动：按下即响
 });
 kbView.addEventListener('pointermove',e=>{
   const p=pointers[e.pointerId]; if(!p) return;
+  if(!currentScale && !passMode && !recMode){                       // 手动模式：滑奏——滑过的每个键都发声
+    const m2=keyFromEvent(e);
+    if(m2!=null && m2!==p.lastM){ p.lastM=m2; flashDown(m2); playNote(m2,AC.currentTime,0.7); }
+    return;
+  }
   const dx=e.clientX-p.x;
   if(Math.abs(dx)>6||Math.abs(e.clientY-p.y)>10) p.moved=true;
-  if(p.moved && (passMode||recMode)) setPan(p.pan+dx,false);  // 按键=起奏；平移用紫色滑条
+  if(p.moved){ if(p.playTimer){ clearTimeout(p.playTimer); p.playTimer=null; } if(dblTimer){ clearTimeout(dblTimer); dblTimer=null; dblM=null; } if(!(currentScale&&kbLock)) setPan(p.pan+dx,false); }  // 滑动=平移并取消待奏（锁定音阶模式不平移）
 });
 function endKbPointer(e){
   const p=pointers[e.pointerId]; if(!p) return; delete pointers[e.pointerId];
+  if(p.playTimer){ clearTimeout(p.playTimer); p.playTimer=null; }
   if(!p.moved && !p.sounded){ const m=p.m!=null?p.m:keyFromEvent(e); if(m!=null){ if(p.activate && !passMode && !recMode){ /* 来自上方区域：首点仅激活键盘，不发声 */ } else onKeyTap(m); } }
 }
 kbView.addEventListener('pointerup',endKbPointer);
@@ -489,8 +502,19 @@ function onKeyTap(m){
 }
 function triggerScaleDown(m){
   const now=performance.now();
-  if(dblM===m && now-dblT<400){ clearTimers(); dblM=null; dblT=0; return; }  // 双击=取消后续音，只留已响的首音(单音)
-  dblM=m; dblT=now; playScale(m);                                           // 按下即奏，无延迟
+  if(dblM===m && now-dblT<400){ clearTimers(); litKey(m,true); curTimers.push(setTimeout(()=>litKey(m,false),300)); dblM=null; dblT=0; return; }  // 锁定模式双击=取消后续音，只留已响的首音(并高亮)
+  dblM=m; dblT=now; playScale(m);                                           // 锁定模式：按下即奏
+}
+function scheduleScaleTap(m,p){   // 解锁模式：等约双击时长再决定
+  const now=performance.now();
+  if(dblM===m && now-dblT<300){                                   // 双击：取消待奏，仅发一个单音
+    if(dblTimer){clearTimeout(dblTimer);dblTimer=null;}
+    killScaleBus(); clearTimers(); playNote(m,AC.currentTime,0.9); litKey(m,true); curTimers.push(setTimeout(()=>litKey(m,false),300));
+    dblM=null; dblT=0; if(p)p.sounded=true; return;
+  }
+  dblM=m; dblT=now; if(p)p.sounded=true;
+  if(dblTimer)clearTimeout(dblTimer);
+  dblTimer=setTimeout(()=>{ dblTimer=null; dblM=null; if(!p||!p.moved) playScale(m); },300);   // 期间未滑动/未双击 → 起奏整条
 }
 
 /* —— 播放音阶 —— */
@@ -784,6 +808,7 @@ function bind(){
   $('libOv').addEventListener('click',e=>{ if(e.target===$('libOv')) closeOv('libOv'); });  // 点弹窗外关闭
   $('newScaleBtn').onclick=()=>openEditor(null);
   $('manualBtn').onclick=()=>{ currentScale=null; selItemId=null; renderList(); $('scaleLabel').textContent='手动弹奏'; $('itemNote').value=''; updateRightPanel(); };
+  $('lockBtn').onclick=()=>{ kbLock=!kbLock; $('lockBtn').textContent=kbLock?'🔒':'🔓'; $('lockBtn').classList.toggle('on',kbLock); };
   $('speedSlider').oninput=()=>applySpeed(+$('speedSlider').value);
   $('spdDown').onclick=()=>applySpeed(speed-5);
   $('spdUp').onclick=()=>applySpeed(speed+5);
