@@ -67,6 +67,7 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 #kbBar button,#kbBar .seg{flex:0 0 auto;white-space:nowrap}
 #speedSlider{flex:1 1 auto;min-width:60px;accent-color:var(--acc)}
 #speedGroup{display:flex;align-items:center;gap:6px;flex:1 1 auto;min-width:90px}
+.spdbtn{flex:0 0 auto;padding:3px 7px;font-size:12px;min-width:0}
 #speedVal{flex:0 0 auto;min-width:42px;text-align:right;color:var(--acc2);font-weight:700;font-size:12px}
 .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{border:0;border-radius:0;padding:5px 9px;font-size:12px;background:var(--bg3)}
@@ -177,7 +178,7 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
     <button id="manualBtn" style="padding:5px 9px">手动输入</button>
     <span class="scaleLabel" id="scaleLabel">未选练习</span>
     <span class="kbhint" id="dblHint" style="color:var(--acc2)">双击=单音</span>
-    <span id="speedGroup"><span class="kbhint">速度</span><input type="range" id="speedSlider" min="50" max="300" step="5" value="100"><span id="speedVal">100%</span></span>
+    <span id="speedGroup"><span class="kbhint">速度</span><button id="spdDown" class="spdbtn">◀</button><input type="range" id="speedSlider" min="50" max="300" step="5" value="100"><button id="spdUp" class="spdbtn">▶</button><span id="speedVal">100%</span></span>
     <span class="status" id="kbStatus"></span>
     <button id="passCloseBtn" style="display:none;padding:4px 10px">关闭</button>
   </div>
@@ -763,6 +764,7 @@ function renderLessons(){
   }
 }
 function updateSpeedUI(){ const sl=$('speedSlider'); if(sl) sl.value=speed; const v=$('speedVal'); if(v) v.textContent=speed+'%'; }
+function applySpeed(v){ v=Math.max(50,Math.min(300,Math.round(v/5)*5)); speed=v; updateSpeedUI(); const st=curStudent(); const it=st&&st.items.find(i=>i.id===selItemId); if(it&&it.type==='scale'){ it.speed=speed; save(); } }
 function setVol(d){ ensureAC(); volume=Math.max(0,Math.min(1,Math.round((volume+d)*10)/10)); if(master) master.gain.value=volume; if(state&&state.settings){ state.settings.volume=volume; save(); } toast('钢琴音量 '+Math.round(volume*100)+'%'); }
 function bind(){
   $('main').addEventListener('pointerdown',()=>setMode('top'));
@@ -783,7 +785,9 @@ function bind(){
   $('libOv').addEventListener('click',e=>{ if(e.target===$('libOv')) closeOv('libOv'); });  // 点弹窗外关闭
   $('newScaleBtn').onclick=()=>openEditor(null);
   $('manualBtn').onclick=()=>{ currentScale=null; selItemId=null; renderList(); $('scaleLabel').textContent='手动弹奏'; $('itemNote').value=''; updateRightPanel(); };
-  $('speedSlider').oninput=()=>{ speed=+$('speedSlider').value; $('speedVal').textContent=speed+'%'; const st=curStudent(); const it=st.items.find(i=>i.id===selItemId); if(it&&it.type==='scale'){ it.speed=speed; save(); } };
+  $('speedSlider').oninput=()=>applySpeed(+$('speedSlider').value);
+  $('spdDown').onclick=()=>applySpeed(speed-5);
+  $('spdUp').onclick=()=>applySpeed(speed+5);
   $('exportBtn').onclick=doExport;
   $('importBtn').onclick=()=>$('importFile').click();
   $('importFile').onchange=e=>{ if(e.target.files[0]) doImport(e.target.files[0]); e.target.value=''; };
