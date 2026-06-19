@@ -64,8 +64,6 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 #kbBar .status.rec{color:var(--hot);font-weight:600}
 #kbBar .status.pass{color:var(--warn);font-weight:600}
 .kbhint{font-size:11px;color:var(--dim);white-space:nowrap;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
-.lockbtn{flex:0 0 auto;padding:5px 8px;font-size:14px;opacity:.4;filter:grayscale(1)}
-.lockbtn.on{opacity:1;filter:none;background:var(--acc);border-color:var(--acc)}
 #kbBar button,#kbBar .seg{flex:0 0 auto;white-space:nowrap}
 #speedSlider{flex:1 1 auto;min-width:60px;accent-color:var(--acc)}
 #speedGroup{display:flex;align-items:center;gap:6px;flex:1 1 auto;min-width:90px}
@@ -83,6 +81,8 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 #holdPad.show{display:flex}
 #holdPad.active{background:rgba(139,108,240,.62)}
 #holdPad span{line-height:1.18;pointer-events:none}
+#holdPad .handemoji{font-size:22px;line-height:1;margin-top:2px;pointer-events:none}
+.handsvg{vertical-align:middle}
 #kbViewport{position:absolute;inset:0;overflow:hidden;touch-action:none}
 #kbInner{position:absolute;top:0;bottom:0;left:0;will-change:transform}
 .key{position:absolute;top:10px;border:1px solid #0d0b13;display:flex;align-items:flex-end;justify-content:center;font-size:10px;padding-bottom:6px}
@@ -181,10 +181,8 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
       <button data-t="syn" class="on">合成音</button>
       <button data-t="pno">采样钢琴</button>
     </div>
-    <button id="manualBtn" style="padding:5px 9px">手动输入</button>
-    <button id="lockBtn" class="lockbtn" title="锁定键盘左右位置（音阶模式）">🔓</button>
+    <button id="manualBtn" title="手动弹奏" style="padding:4px 9px;font-size:18px;line-height:1">🖐</button>
     <span class="scaleLabel" id="scaleLabel">未选练习</span>
-    <span class="kbhint" id="dblHint" style="color:var(--acc2)">双击=单音</span>
     <span id="speedGroup"><span class="kbhint">速度</span><button id="spdDown" class="spdbtn">◀</button><input type="range" id="speedSlider" min="50" max="300" step="5" value="100"><button id="spdUp" class="spdbtn">▶</button><span id="speedVal">100%</span></span>
     <span class="status" id="kbStatus"></span>
     <button id="passCloseBtn" style="display:none;padding:4px 10px">关闭</button>
@@ -192,7 +190,7 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 
   <div id="kbWrap">
     <div id="kbViewport"><div id="kbInner"></div></div>
-    <div id="holdPad"><span>按住</span><span>手动</span></div>
+    <div id="holdPad"><span>按住</span><span class="handemoji">🖐</span></div>
   </div>
   <div id="posBar"><div id="posThumb"></div></div>
 </div>
@@ -815,7 +813,6 @@ function bind(){
   $('libOv').addEventListener('click',e=>{ if(e.target===$('libOv')) closeOv('libOv'); });  // 点弹窗外关闭
   $('newScaleBtn').onclick=()=>openEditor(null);
   $('manualBtn').onclick=()=>{ currentScale=null; selItemId=null; renderList(); $('scaleLabel').textContent='手动弹奏'; $('itemNote').value=''; updateRightPanel(); };
-  $('lockBtn').onclick=()=>{ kbLock=!kbLock; $('lockBtn').textContent=kbLock?'🔒':'🔓'; $('lockBtn').classList.toggle('on',kbLock); };
   const hp=$('holdPad');
   hp.addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); if(holdId!=null)return; ensureAC(); holdId=e.pointerId; holdSaved=currentScale; currentScale=null; holdManual=true; hp.classList.add('active'); $('scaleLabel').textContent='临时手动（按住）'; updateHoldPad(); });
   function endHold(e){ if(holdId==null||(e&&e.pointerId!==holdId))return; holdId=null; currentScale=holdSaved; holdSaved=null; holdManual=false; hp.classList.remove('active'); if(selItemId) selectItem(selItemId); else { updateRightPanel(); } }
