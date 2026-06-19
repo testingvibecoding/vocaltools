@@ -79,6 +79,10 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 #posThumb{position:absolute;top:4px;bottom:4px;background:var(--acc);opacity:.55;border-radius:5px}
 /* keyboard */
 #kbWrap{position:relative;background:#0d0b13;min-height:0;flex:1}
+#holdPad{position:absolute;left:0;bottom:0;z-index:6;display:none;border-top-right-radius:100%;background:rgba(139,108,240,.30);border-top:2px solid var(--acc2);border-right:2px solid var(--acc2);color:#fff;font-size:12px;font-weight:800;flex-direction:column;justify-content:flex-end;align-items:flex-start;padding:0 0 7px 6px;text-shadow:0 1px 2px rgba(0,0,0,.6);touch-action:none;user-select:none}
+#holdPad.show{display:flex}
+#holdPad.active{background:rgba(139,108,240,.62)}
+#holdPad span{line-height:1.18;pointer-events:none}
 #kbViewport{position:absolute;inset:0;overflow:hidden;touch-action:none}
 #kbInner{position:absolute;top:0;bottom:0;left:0;will-change:transform}
 .key{position:absolute;top:10px;border:1px solid #0d0b13;display:flex;align-items:flex-end;justify-content:center;font-size:10px;padding-bottom:6px}
@@ -188,6 +192,7 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 
   <div id="kbWrap">
     <div id="kbViewport"><div id="kbInner"></div></div>
+    <div id="holdPad"><span>按住</span><span>手动</span></div>
   </div>
   <div id="posBar"><div id="posThumb"></div></div>
 </div>
@@ -445,6 +450,7 @@ function buildKeyboard(){
   for(let m=LO;m<=HI;m++){ if(!isBlack(m))continue; const cen=(cLeftIndex(m)+BCEN[m%12])*WKW; keyX[m]=cen-BKW/2; keyW[m]=BKW;
     const d=document.createElement('div'); d.className='key b'; d.style.left=keyX[m]+'px'; d.style.width=BKW+'px'; d.dataset.m=m; const bn=BLACKNAME[m%12]||['','']; d.innerHTML='<span class="lab blab"><span class="sh">'+bn[0]+'</span><span class="fl">'+bn[1]+'</span></span>'; kbInner.appendChild(d); keyEl[m]=d; }
   applyPassaggio(); centerOn(60,false);
+  const hp=$('holdPad'); if(hp){ const r=Math.round(WKW*1.5); hp.style.width=r+'px'; hp.style.height=r+'px'; } updateHoldPad();
 }
 function clampPan(x){ const vw=kbView.clientWidth; const min=Math.min(0,vw-innerW); return Math.max(min,Math.min(0,x)); }
 function setPan(x,anim){ panX=clampPan(x); kbInner.style.transition=anim?'transform .28s ease':'none'; kbInner.style.transform='translateX('+panX+'px)'; updateThumb(); }
@@ -459,7 +465,7 @@ function litKey(m,on){ const e=keyEl[m]; if(e) e.classList.toggle('lit',on); }
 function flashDown(m){ const e=keyEl[m]; if(!e)return; e.classList.add('down'); setTimeout(()=>e.classList.remove('down'),140); }
 
 /* —— 键盘指针：拖动平移 / 点按触发 —— */
-let pointers={}, kbLock=false;   // 多点触控 + 键盘锁定（音阶模式）
+let pointers={}, kbLock=false, holdId=null, holdSaved=null, holdManual=false;   // 多点触控 + 锁定 + 左下角按住手动
 kbView.addEventListener('pointerdown',e=>{
   ensureAC(); const wasTop=(curMode!=='kb'); setMode('kb');
   const m=keyFromEvent(e);
@@ -612,7 +618,8 @@ function escapeHtml(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':
 let curMode='kb';
 function applyModeHeights(){ const tb=$('topbar'); const topH=(tb.offsetTop+tb.offsetHeight)||34; document.documentElement.style.setProperty('--topH',topH+'px'); const slot=$('mainSlot').offsetHeight||150; const kbBarH=$('kbBar').offsetHeight||30; const kbH=$('kbWrap').offsetHeight||200; $('main').style.height=(curMode==='top'?(slot+kbBarH+Math.round(kbH/3)):slot)+'px'; }
 function setMode(m){ if(curMode===m)return; curMode=m; const a=$('app'); a.classList.remove('mode-kb','mode-top'); a.classList.add('mode-'+m); applyModeHeights(); updateRightPanel(); if(m==='kb'){ scrollSelectedCenter(); setTimeout(scrollSelectedCenter,320); } }  // 过渡结束后再居中一次
-function updateRightPanel(){ const it=curStudent().items.find(i=>i.id===selItemId); const isScale=it&&it.type==='scale'&&!!scaleById(it.scaleId);
+function updateHoldPad(){ const hp=$('holdPad'); if(hp) hp.classList.toggle('show', !!currentScale || holdManual); }
+function updateRightPanel(){ updateHoldPad(); const it=curStudent().items.find(i=>i.id===selItemId); const isScale=it&&it.type==='scale'&&!!scaleById(it.scaleId);
   $('scaleInfo').style.display=(curMode==='top'&&isScale)?'':'none';
   const dh=$('dblHint'); if(dh) dh.style.display=currentScale?'':'none';
   const pl=$('previewLink'); if(pl) pl.onclick=e=>{e.preventDefault(); if(currentScale)playScale(60);}; }
@@ -809,6 +816,10 @@ function bind(){
   $('newScaleBtn').onclick=()=>openEditor(null);
   $('manualBtn').onclick=()=>{ currentScale=null; selItemId=null; renderList(); $('scaleLabel').textContent='手动弹奏'; $('itemNote').value=''; updateRightPanel(); };
   $('lockBtn').onclick=()=>{ kbLock=!kbLock; $('lockBtn').textContent=kbLock?'🔒':'🔓'; $('lockBtn').classList.toggle('on',kbLock); };
+  const hp=$('holdPad');
+  hp.addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); if(holdId!=null)return; ensureAC(); holdId=e.pointerId; holdSaved=currentScale; currentScale=null; holdManual=true; hp.classList.add('active'); $('scaleLabel').textContent='临时手动（按住）'; updateHoldPad(); });
+  function endHold(e){ if(holdId==null||(e&&e.pointerId!==holdId))return; holdId=null; currentScale=holdSaved; holdSaved=null; holdManual=false; hp.classList.remove('active'); if(selItemId) selectItem(selItemId); else { updateRightPanel(); } }
+  hp.addEventListener('pointerup',endHold); hp.addEventListener('pointercancel',endHold); hp.addEventListener('pointerleave',endHold);
   $('speedSlider').oninput=()=>applySpeed(+$('speedSlider').value);
   $('spdDown').onclick=()=>applySpeed(speed-5);
   $('spdUp').onclick=()=>applySpeed(speed+5);
