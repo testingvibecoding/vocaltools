@@ -87,7 +87,7 @@ textarea{background:var(--bg2);border:1px solid var(--line);border-radius:8px;co
 #kbInner{position:absolute;top:0;bottom:0;left:0;will-change:transform}
 .key{position:absolute;top:10px;border:1px solid #0d0b13;display:flex;align-items:flex-end;justify-content:center;font-size:10px;padding-bottom:6px}
 .key.w{height:calc(100% - 10px);background:linear-gradient(#fff,var(--white));color:#3a3450;border-radius:0 0 5px 5px;z-index:1}
-.key.b{height:calc(67% - 10px);background:linear-gradient(#3a3450,var(--black));color:#cfc6ec;border-radius:0 0 4px 4px;z-index:2}
+.key.b{height:calc(50% - 8px);background:linear-gradient(#3a3450,var(--black));color:#cfc6ec;border-radius:0 0 4px 4px;z-index:2}
 .key.w.lit{background:linear-gradient(var(--whiteact),#a98cff);color:#21123a}
 .key.b.lit{background:linear-gradient(var(--blackact),#4a37a0);color:#fff}
 .key.w.down{background:linear-gradient(#d9c8ff,#bfa3ff)}
@@ -448,7 +448,7 @@ function buildKeyboard(){
   for(let m=LO;m<=HI;m++){ if(!isBlack(m))continue; const cen=(cLeftIndex(m)+BCEN[m%12])*WKW; keyX[m]=cen-BKW/2; keyW[m]=BKW;
     const d=document.createElement('div'); d.className='key b'; d.style.left=keyX[m]+'px'; d.style.width=BKW+'px'; d.dataset.m=m; const bn=BLACKNAME[m%12]||['','']; d.innerHTML='<span class="lab blab"><span class="sh">'+bn[0]+'</span><span class="fl">'+bn[1]+'</span></span>'; kbInner.appendChild(d); keyEl[m]=d; }
   applyPassaggio(); centerOn(60,false);
-  const hp=$('holdPad'); if(hp){ const r=Math.round(WKW*1.5); hp.style.width=r+'px'; hp.style.height=r+'px'; } updateHoldPad();
+  const hp=$('holdPad'); if(hp){ const r=Math.round(WKW*1.125); hp.style.width=r+'px'; hp.style.height=r+'px'; } updateHoldPad();
 }
 function clampPan(x){ const vw=kbView.clientWidth; const min=Math.min(0,vw-innerW); return Math.max(min,Math.min(0,x)); }
 function setPan(x,anim){ panX=clampPan(x); kbInner.style.transition=anim?'transform .28s ease':'none'; kbInner.style.transform='translateX('+panX+'px)'; updateThumb(); }
